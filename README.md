@@ -1,17 +1,19 @@
 ## pyfdt : Python Flattened Device Tree Manipulation ##
 ----------
-The pyfdt library is aimed to facilitate manipulation of the device tree in ordre to parse it and output in various formats.
+The pyfdt library is aimed to facilitate manipulation of the flattened device tree in order to parse it and generate output in various formats.
 
-Device Tree Blob (.dtb) input is actually the only input format accepted, but either DTB or Device Tree Structure (text .dts) is available.
+It is highly based on fdtdump for the dtc compiler package.
 
-The libraries is aimed to add the following features :
+Device Tree Blob (.dtb) input is actually the only input format accepted, but either Device Tree Blob (DTB) or Device Tree Structure (text DTS) is available.
+
+The library future is to add the following features :
 
  - Node manipulation (list, delete attributes)
  - Attributes manipulation
  - Tree walkthrought
  - Device Tree path resolution
 
-No DTS parser/compiler is event considered since "dtc" is the official compiler, but i'm open to any compiler implementation over pyftd...
+No DTS parser/compiler is event considered since "dtc" is the official compiler, but i'm open to any compiler implementation over pyfdt...
 
 Typical usage is :
 
@@ -21,3 +23,6 @@ Typical usage is :
 	print dtb.to_fdt().to_dts()
 
 Will open a binary DTB and output an human readable DTS structure.
+
+[Device Tree Wiki](http://www.devicetree.org)
+[Device Tree Compiler](http://www.devicetree.org/Device_Tree_Compiler)
