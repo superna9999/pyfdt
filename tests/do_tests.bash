@@ -113,6 +113,47 @@ for dtb in $DTB_TESTS; do
     PASS=`expr $PASS + 1`
 done
 
+PYFDT_TESTS="basic gen_v1 gen_v2 gen_v3"
+
+echo "Running pyfdt generation Tests..."
+for dtb in $PYFDT_TESTS; do
+    TESTS=`expr $TESTS + 1`
+    echo "TEST $dtb..."
+    if ! ./genfdt.py $dtb ; then
+        echo "FAIL generating $dtb"
+        FAIL=`expr $FAIL + 1`
+        FAILED="$FAILED $dtb"
+        continue
+    fi
+    if ! dtc/fdtdump out.dtb > $dtb.dts ; then
+        echo "FAIL dump : $dtb see $dtb.hex"
+        hd < out.dtb > $dtb.hex
+        FAIL=`expr $FAIL + 1`
+        FAILED="$FAILED $dtb"
+        continue
+    fi
+    ../dtbdump.py --format dts out.dtb $dtb.pydts
+    if ! diff -u out.dts $dtb.pydts > $dtb.pyresult ; then
+        echo "FAIL diff : $dtb see $dtb.pyresult"
+        hd < out.dtb > $dtb.hex
+        cp out.dts $dtb.orig.pydts
+        FAIL=`expr $FAIL + 1`
+        FAILED="$FAILED $dtb"
+        continue
+    fi
+    grep -v "// " $dtb.dts > $dtb.dts_
+    grep -v "// " $dtb.pydts > $dtb.pydts_
+    if ! diff -u $dtb.dts_ $dtb.pydts_ > $dtb.result ; then
+        echo "FAIL diff : $dtb see $dtb.result"
+        hd < out.dtb > $dtb.hex
+        FAIL=`expr $FAIL + 1`
+        FAILED="$FAILED $dtb"
+        continue
+    fi
+    rm out.dts out.dtb $dtb*
+    PASS=`expr $PASS + 1`
+done
+
 echo "Passed : $PASS/$TESTS"
 echo "Failed : $FAIL/$TESTS"
 

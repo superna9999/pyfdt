@@ -37,9 +37,17 @@ FDT_MAX_VERSION = 17
 class FdtProperty(object):
     """ Represents an empty property"""
 
+    @staticmethod
+    def __validate_dt_name(name):
+        """Checks the name validity"""
+        return not any([True for char in name
+                        if char not in string.printable])
+
     def __init__(self, name):
         """Init with name"""
         self.name = name
+        if not FdtProperty.__validate_dt_name(self.name):
+            raise Exception("Invalid name '%s'" % self.name)
 
     def get_name(self):
         """Get property name"""
@@ -59,6 +67,10 @@ class FdtProperty(object):
         pos += 12
         return (pack('>III', FDT_PROP, 0, strpos),
                 string_store, pos)
+
+    def __getitem__(self, value):
+        """Returns No Items"""
+        return None
 
     @staticmethod
     def __check_prop_strings(value):
@@ -114,6 +126,13 @@ class FdtPropertyStrings(FdtProperty):
         FdtProperty.__init__(self, name)
         if not strings:
             raise Exception("Invalid strings")
+        for stri in strings:
+            if len(stri) == 0:
+                raise Exception("Invalid strings")
+            if any([True for char in name
+                        if char not in string.printable 
+                        or char in ('\r', '\n')]):
+                raise Exception("Invalid chars in strings")
         self.strings = strings
 
     @classmethod
@@ -149,9 +168,9 @@ class FdtPropertyStrings(FdtProperty):
         """String representation"""
         return "Property(Strings:%s)" % self.strings
 
-    def __getattr__(self, index):
-        """Get strings"""
-        return getattr(self.strings, index)
+    def __getitem__(self, index):
+        """Get strings, returns a string"""
+        return self.strings[index]
 
     def __len__(self):
         """Get strings count"""
@@ -199,9 +218,9 @@ class FdtPropertyWords(FdtProperty):
         """String representation"""
         return "Property(Words:%s)" % self.words
 
-    def __getattr__(self, index):
-        """Get words"""
-        return getattr(self.words, index)
+    def __getitem__(self, index):
+        """Get words, returns a word integer"""
+        return self.words[index]
 
     def __len__(self):
         """Get words count"""
@@ -247,12 +266,12 @@ class FdtPropertyBytes(FdtProperty):
         """String representation"""
         return "Property(Bytes:%s)" % self.bytes
 
-    def __getattr__(self, index):
-        """Get bytes"""
-        return getattr(self.bytes, index)
+    def __getitem__(self, index):
+        """Get bytes, returns a byte"""
+        return self.bytes[index]
 
     def __len__(self):
-        """Get bytes count"""
+        """Get strings count"""
         return len(self.bytes)
 
 
@@ -280,11 +299,19 @@ class FdtNop(object):  # pylint: disable-msg=R0903
 class FdtNode(object):
     """Node representation"""
 
+    @staticmethod
+    def __validate_dt_name(name):
+        """Checks the name validity"""
+        return not any([True for char in name
+                        if char not in string.printable])
+
     def __init__(self, name):
         """Init node with name"""
         self.name = name
         self.subdata = []
         self.parent = None
+        if not FdtNode.__validate_dt_name(self.name):
+            raise Exception("Invalid name '%s'" % self.name)
 
     def get_name(self):
         """Get property name"""
@@ -338,12 +365,12 @@ class FdtNode(object):
         blob += pack('>I', FDT_END_NODE)
         return (blob, strings, pos)
 
-    def __getattr__(self, index):
-        """Get child attribute or node"""
-        return getattr(self.subdata, index)
+    def __getitem__(self, index):
+        """Get subnodes, returns either a Node, a Property or a Nop"""
+        return self.subdata[index]
 
     def __len__(self):
-        """Get child count"""
+        """Get strings count"""
         return len(self.subdata)
 
 
@@ -371,6 +398,10 @@ class Fdt(object):
         self.rootnode = rootnode
         self.prenops = prenops
         self.postnops = postnops
+
+    def get_rootnode(self):
+        """Get root node"""
+        return self.rootnode
 
     def add_reserve_entries(self, reserve_entries):
         """Add reserved entries as list of dict with
@@ -411,7 +442,7 @@ class Fdt(object):
 
     def to_dtb(self):
         """Export to Blob format"""
-        if self.rootnode is None or self.reserve_entries is None:
+        if self.rootnode is None:
             return None
         blob_reserve_entries = ''
         if self.reserve_entries is not None:
