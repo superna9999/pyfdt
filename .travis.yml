@@ -4,5 +4,3 @@ python:
   - "2.7"
 # run tests
 script: (cd tests && ./do_tests.bash)
-# clean
-script: (cd tests && ./clean.bash)
