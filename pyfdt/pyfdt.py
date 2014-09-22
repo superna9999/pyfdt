@@ -29,6 +29,8 @@ FDT_PROP = 0x3
 FDT_NOP = 0x4
 FDT_END = 0x9
 
+INDENT = ' ' * 4
+
 FDT_MAX_VERSION = 17
 
 
@@ -45,43 +47,46 @@ class FdtProperty(object):
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
-        return '\t'*depth + self.name
+        return INDENT*depth + self.name + ';'
 
-    def dtb_represent(self, string_store):
+    def dtb_represent(self, string_store, pos=0, version=17):
         """Get blob representation"""
-        pos = string_store.find(self.name+'\0')
-        if pos < 0:
-            pos = len(string_store)
+        # print "%x:%s" % (pos, self)
+        strpos = string_store.find(self.name+'\0')
+        if strpos < 0:
+            strpos = len(string_store)
             string_store += self.name+'\0'
-        return (pack('>III', FDT_PROP, 0, pos),
-                string_store)
+        pos += 12
+        return (pack('>III', FDT_PROP, 0, strpos),
+                string_store, pos)
 
     @staticmethod
     def __check_prop_strings(value):
         """Check property string validity
-           make is more simple and robust
+           Python version of util_is_printable_string from dtc
         """
-        strings = 0
-        current = 0
+        pos = 0
+        posi = 0
+        end = len(value)
+        
         if not len(value):
             return None
+        
         if ord(value[-1]) > 0:
             return None
-        for char in value:
-            if ord(char) and chr(ord(char)) not in string.printable:
-                return False
-            elif ord(char) == 0:
-                if current:
-                    strings += 1
-                    current = 0
-                else:
-                    if not current and not strings:
-                        return False
-            else:
-                current += 1
-        if strings:
-            return True
-        return False
+
+        while pos < end:
+            posi = pos
+            while pos < end and ord(value[pos]) > 0 \
+                  and value[pos] in string.printable \
+                  and value[pos] not in ('\r', '\n'):
+                pos += 1
+
+            if ord(value[pos]) > 0 or pos == posi:
+                return None
+            pos += 1
+
+        return True
 
     @staticmethod
     def new_raw_property(name, raw_value):
@@ -102,21 +107,7 @@ class FdtPropertyStrings(FdtProperty):
     @classmethod
     def __extract_prop_strings(cls, value):
         """Extract strings from raw_value"""
-        strings = []
-        current = ''
-        if ord(value[-1]) > 0:
-            return None
-        for char in value:
-            if ord(char) and chr(ord(char)) not in string.printable:
-                return None
-            elif ord(char) == 0:
-                if len(current):
-                    strings.append(current)
-                    current = ''
-            else:
-                current += char
-        if strings:
-            return strings
+        return [st for st in value.split('\0') if len(st)]
 
     def __init__(self, name, strings):
         """Init with strings"""
@@ -132,23 +123,27 @@ class FdtPropertyStrings(FdtProperty):
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
-        return '\t'*depth + self.name + ' = "' + \
-            self.strings[0] + '", "'.join(self.strings[1:]) + '";'
+        return INDENT*depth + self.name + ' = "' + \
+            '", "'.join(self.strings) + '";'
 
-    def dtb_represent(self, string_store):
+    def dtb_represent(self, string_store, pos=0, version=17):
         """Get blob representation"""
+        # print "%x:%s" % (pos, self)
         blob = ''
         for chars in self.strings:
             blob += chars + '\0'
         blob_len = len(blob)
-        if len(blob) % 4:
-            blob += '\0'*(4-(len(blob) % 4))
-        pos = string_store.find(self.name+'\0')
-        if pos < 0:
-            pos = len(string_store)
+        if version < 16 and (pos+12) % 8 != 0:
+            blob = '\0'*(8-((pos+12) % 8)) + blob
+        if blob_len % 4:
+            blob += '\0'*(4-(blob_len % 4))
+        strpos = string_store.find(self.name+'\0')
+        if strpos < 0:
+            strpos = len(string_store)
             string_store += self.name+'\0'
-        blob = pack('>III', FDT_PROP, blob_len, pos) + blob
-        return (blob, string_store)
+        blob = pack('>III', FDT_PROP, blob_len, strpos) + blob
+        pos += len(blob)
+        return (blob, string_store, pos)
 
     def __str__(self):
         """String representation"""
@@ -185,18 +180,20 @@ class FdtPropertyWords(FdtProperty):
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
-        return '\t'*depth + self.name + ' = <' + \
+        return INDENT*depth + self.name + ' = <' + \
                ' '.join(["0x%08x" % word for word in self.words]) + ">;"
 
-    def dtb_represent(self, string_store):
+    def dtb_represent(self, string_store, pos=0, version=17):
         """Get blob representation"""
-        pos = string_store.find(self.name+'\0')
-        if pos < 0:
-            pos = len(string_store)
+        # # print "%x:%s" % (pos, self)
+        strpos = string_store.find(self.name+'\0')
+        if strpos < 0:
+            strpos = len(string_store)
             string_store += self.name+'\0'
-        return (pack('>III', FDT_PROP, len(self.words)*4, pos) +
-                ''.join([pack('>I', word) for word in self.words]),
-                string_store)
+        blob = pack('>III', FDT_PROP, len(self.words)*4, strpos) + \
+                ''.join([pack('>I', word) for word in self.words])
+        pos += len(blob)
+        return (blob, string_store, pos)
 
     def __str__(self):
         """String representation"""
@@ -224,24 +221,27 @@ class FdtPropertyBytes(FdtProperty):
     @classmethod
     def init_raw(cls, name, raw_value):
         """Init from raw"""
-        return cls(name, [ord(byte) for byte in raw_value])
+        return cls(name, [unpack('b', byte)[0] for byte in raw_value])
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
-        return '\t'*depth + self.name + ' = [' + \
-            ' '.join(["0x%02x" % byte for byte in self.bytes]) + "];"
+        return INDENT*depth + self.name + ' = [' + \
+            ' '.join(["%02x" % (byte & int('ffffffff',16)) 
+                      for byte in self.bytes]) + "];"
 
-    def dtb_represent(self, string_store):
+    def dtb_represent(self, string_store, pos=0, version=17):
         """Get blob representation"""
-        pos = string_store.find(self.name+'\0')
-        if pos < 0:
-            pos = len(string_store)
+        # print "%x:%s" % (pos, self)
+        strpos = string_store.find(self.name+'\0')
+        if strpos < 0:
+            strpos = len(string_store)
             string_store += self.name+'\0'
-        blob = pack('>III', FDT_PROP, len(self.bytes), pos)
-        blob += ''.join([pack('>I', byte) for byte in self.bytes])
+        blob = pack('>III', FDT_PROP, len(self.bytes), strpos)
+        blob += ''.join([pack('>b', byte) for byte in self.bytes])
         if len(blob) % 4:
             blob += '\0'*(4-(len(blob) % 4))
-        return (blob, string_store)
+        pos += len(blob)
+        return (blob, string_store, pos)
 
     def __str__(self):
         """String representation"""
@@ -268,11 +268,13 @@ class FdtNop(object):  # pylint: disable-msg=R0903
 
     def dts_represent(self, depth=0):  # pylint: disable-msg=R0201
         """Get dts string representation"""
-        return '\t'*depth
+        return INDENT*depth+'// [NOP]'
 
-    def dtb_represent(self, string_store):  # pylint: disable-msg=R0201
+    def dtb_represent(self, string_store, pos=0, version=17):
         """Get blob representation"""
-        return (pack('>I', FDT_NOP), string_store)
+        # print "%x:%s" % (pos, self)
+        pos += 4
+        return (pack('>I', FDT_NOP), string_store, pos)
 
 
 class FdtNode(object):
@@ -310,13 +312,16 @@ class FdtNode(object):
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
-        return '\t'*depth + self.name + ' {\n' + \
-               ('\t'*depth + '\n').join([sub.dts_represent(depth+1)
-                                         for sub in self.subdata]) + \
-               '\n' + '\t'*depth + "}\n"
+        result = ('\n').join([sub.dts_represent(depth+1)
+                                         for sub in self.subdata])
+        if len(result) > 0:
+            result += '\n'
+        return INDENT*depth + self.name + ' {\n' + \
+               result + INDENT*depth + "};"
 
-    def dtb_represent(self, strings_store):
+    def dtb_represent(self, strings_store, pos=0, version=17):
         """Get blob representation"""
+        # print "%x:%s" % (pos, self)
         strings = strings_store
         if self.get_name() == '\\':
             blob = pack('>II', FDT_BEGIN_NODE, 0)
@@ -325,11 +330,13 @@ class FdtNode(object):
             blob += self.get_name() + '\0'
         if len(blob) % 4:
             blob += '\0'*(4-(len(blob) % 4))
+        pos += len(blob)
         for sub in self.subdata:
-            (data, strings) = sub.dtb_represent(strings)
+            (data, strings, pos) = sub.dtb_represent(strings, pos, version)
             blob += data
+        pos += 4
         blob += pack('>I', FDT_END_NODE)
-        return (blob, strings)
+        return (blob, strings, pos)
 
     def __getattr__(self, index):
         """Get child attribute or node"""
@@ -355,11 +362,15 @@ class Fdt(object):
                        'size_dt_strings': 0,
                        'size_dt_struct': 0}
         self.rootnode = None
+        self.prenops = None
+        self.postnops = None
         self.reserve_entries = None
 
-    def add_rootnode(self, node):
+    def add_rootnode(self, rootnode, prenops=None, postnops=None):
         """Add root node"""
-        self.rootnode = node
+        self.rootnode = rootnode
+        self.prenops = prenops
+        self.postnops = postnops
 
     def add_reserve_entries(self, reserve_entries):
         """Add reserved entries as list of dict with
@@ -375,22 +386,33 @@ class Fdt(object):
         if self.header['version'] >= 2:
             result += "// boot_cpuid_phys:\t0x%x\n" % \
                 self.header['boot_cpuid_phys']
+        result += '\n'
         if self.reserve_entries is not None:
             for entry in self.reserve_entries:
-                result += "/memreserve/ %#lx %#lx;\n" % \
-                    (entry['address'], entry['size'])
+                result += "/memreserve/ "
+                if entry['address']:
+                    result += "%#x " % entry['address']
+                else:
+                    result += "0 "
+                if entry['size']:
+                    result += "%#x" % entry['size']
+                else:
+                    result += "0"
+                result += ";\n"
+        if self.prenops:
+            result += '\n'.join([nop.dts_represent() for nop in self.prenops])
+            result += '\n'
         if self.rootnode is not None:
             result += self.rootnode.dts_represent()
+        if self.postnops:
+            result += '\n'
+            result += '\n'.join([nop.dts_represent() for nop in self.postnops])
         return result
 
     def to_dtb(self):
         """Export to Blob format"""
         if self.rootnode is None or self.reserve_entries is None:
             return None
-        (blob_dt, blob_strings) = self.rootnode.dtb_represent('')
-        blob_dt = blob_dt + pack('>I', FDT_END)
-        self.header['size_dt_strings'] = len(blob_strings)
-        self.header['size_dt_struct'] = len(blob_dt)
         blob_reserve_entries = ''
         if self.reserve_entries is not None:
             for entry in self.reserve_entries:
@@ -405,13 +427,24 @@ class Fdt(object):
             header_size += 4
         if self.header['version'] >= 17:
             header_size += 4
+        dt_start = header_size + len(blob_reserve_entries)
+        # print "dt_start %d" % dt_start
+        (blob_dt, blob_strings, dt_pos) = \
+            self.rootnode.dtb_represent('', dt_start, self.header['version'])
+        if self.prenops is not None:
+            blob_dt = ''.join([nop.dtb_represent('')[0] 
+                               for nop in self.prenops])\
+                      + blob_dt
+        if self.postnops is not None:
+            blob_dt += ''.join([nop.dtb_represent('')[0] 
+                                for nop in self.postnops])
+        blob_dt += pack('>I', FDT_END)
+        self.header['size_dt_strings'] = len(blob_strings)
+        self.header['size_dt_struct'] = len(blob_dt)
         self.header['off_mem_rsvmap'] = header_size
-        self.header['off_dt_struct'] = header_size + len(blob_reserve_entries)
-        self.header['off_dt_strings'] = (self.header['off_dt_struct'] +
-                                         self.header['size_dt_struct'])
-        self.header['totalsize'] = (header_size + len(blob_reserve_entries) +
-                                    self.header['size_dt_strings'] +
-                                    self.header['size_dt_struct'])
+        self.header['off_dt_struct'] = dt_start
+        self.header['off_dt_strings'] = dt_start + len(blob_dt)
+        self.header['totalsize'] = dt_start + len(blob_dt) + len(blob_strings)
         blob_header = pack('>IIIIIII', self.header['magic'],
                            self.header['totalsize'],
                            self.header['off_dt_struct'],
@@ -534,11 +567,11 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             if len(data) < cell.size:
                 break
             tag, = cell.unpack_from(data)
-            # print "*** %s" % self.fdt_dt_tag_name.get(tag, '')
+            # print "*** %s" % self.__fdt_dt_tag_name.get(tag, '')
             if self.__fdt_dt_tag_name.get(tag, '') in 'node_begin':
                 name = self.__extract_fdt_nodename()
                 if len(name) == 0:
-                    name = '\\'
+                    name = '/'
                 tags.append((tag, name))
             elif self.__fdt_dt_tag_name.get(tag, '') in ('node_end', 'nop'):
                 tags.append((tag, ''))
@@ -567,7 +600,12 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
         self.fdt_dt_tags = self.__extract_fdt_dt()
 
     def __to_nodes(self):
-        """Represent fdt as Node and properties structure"""
+        """Represent fdt as Node and properties structure
+           Returns a set with the pre-node Nops, the Root Node,
+            and the post-node Nops.
+        """
+        prenops = []
+        postnops = []
         rootnode = None
         curnode = None
         for tag in self.fdt_dt_tags:
@@ -585,18 +623,29 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             elif self.__fdt_dt_tag_name.get(tag[0], '') in 'nop':
                 if curnode is not None:
                     curnode.add_subnode(FdtNop())
+                elif rootnode is not None:
+                    postnops.append(FdtNop())
+                else:
+                    prenops.append(FdtNop())
             elif self.__fdt_dt_tag_name.get(tag[0], '') in 'prop':
                 if curnode is not None:
                     curnode.add_raw_attribute(tag[1][0], tag[1][1])
             elif self.__fdt_dt_tag_name.get(tag[0], '') in 'end':
                 continue
-        return rootnode
+        return (prenops, rootnode, postnops)
 
     def to_fdt(self):
-        """Create a fdt object"""
+        """Create a fdt object
+            Returns a Fdt object
+        """
+        if self.fdt_header['version'] >= 2:
+            boot_cpuid_phys = self.fdt_header['boot_cpuid_phys']
+        else:
+            boot_cpuid_phys = 0
         fdt = Fdt(version=self.fdt_header['version'],
                   last_comp_version=self.fdt_header['last_comp_version'],
-                  boot_cpuid_phys=self.fdt_header['boot_cpuid_phys'])
-        fdt.add_rootnode(self.__to_nodes())
+                  boot_cpuid_phys=boot_cpuid_phys)
+        (prenops, rootnode, postnops) = self.__to_nodes()
+        fdt.add_rootnode(rootnode, prenops=prenops, postnops=postnops)
         fdt.add_reserve_entries(self.fdt_reserve_entries)
         return fdt
