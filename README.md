@@ -26,3 +26,5 @@ Will open a binary DTB and output an human readable DTS structure.
 
 [Device Tree Wiki](http://www.devicetree.org)
 [Device Tree Compiler](http://www.devicetree.org/Device_Tree_Compiler)
+
+[![Build Status](https://travis-ci.org/superna9999/pyfdt.svg?branch=master)](https://travis-ci.org/superna9999/pyfdt)
