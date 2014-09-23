@@ -68,6 +68,10 @@ class FdtProperty(object):
         return (pack('>III', FDT_PROP, 0, strpos),
                 string_store, pos)
 
+    def to_raw(self):
+        """Return RAW value representation"""
+        return ''
+
     def __getitem__(self, value):
         """Returns No Items"""
         return None
@@ -164,6 +168,10 @@ class FdtPropertyStrings(FdtProperty):
         pos += len(blob)
         return (blob, string_store, pos)
 
+    def to_raw(self):
+        """Return RAW value representation"""
+        return ''.join([chars+'\0' for chars in self.strings])
+
     def __str__(self):
         """String representation"""
         return "Property(Strings:%s)" % self.strings
@@ -214,6 +222,10 @@ class FdtPropertyWords(FdtProperty):
         pos += len(blob)
         return (blob, string_store, pos)
 
+    def to_raw(self):
+        """Return RAW value representation"""
+        return ''.join([pack('>I', word) for word in self.words])
+
     def __str__(self):
         """String representation"""
         return "Property(Words:%s)" % self.words
@@ -261,6 +273,10 @@ class FdtPropertyBytes(FdtProperty):
             blob += '\0'*(4-(len(blob) % 4))
         pos += len(blob)
         return (blob, string_store, pos)
+
+    def to_raw(self):
+        """Return RAW value representation"""
+        return ''.join([pack('>b', byte) for byte in self.bytes])
 
     def __str__(self):
         """String representation"""

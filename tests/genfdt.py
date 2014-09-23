@@ -3,8 +3,6 @@ from pyfdt import *
 import argparse
 
 def gen_v1():
-    phandle = 0
-
     root = pyfdt.FdtNode("/")
 
     root.add_subnode(FdtPropertyWords("#address-cells", [1]))
@@ -19,8 +17,6 @@ def gen_v1():
     return fdt
 
 def gen_v2():
-    phandle = 0
-
     root = pyfdt.FdtNode("/")
 
     root.add_subnode(FdtPropertyWords("#address-cells", [1]))
@@ -35,8 +31,6 @@ def gen_v2():
     return fdt
 
 def gen_v3():
-    phandle = 0
-
     root = pyfdt.FdtNode("/")
 
     root.add_subnode(FdtPropertyWords("#address-cells", [1]))
@@ -80,8 +74,8 @@ def gen_basic():
     soc_intc.add_subnode(FdtPropertyWords("reg", [0xF0001000, 0x4000]))
     soc_intc.add_subnode(FdtPropertyWords("#address-cells", [1]))
     soc_intc.add_subnode(FdtPropertyWords("#size-cells", [1]))
-    intc_phandle = phandle
     phandle += 1
+    intc_phandle = phandle
     soc_intc.add_subnode(FdtPropertyWords("linux,phandle", [intc_phandle]))
     soc_intc.add_subnode(FdtPropertyWords("phandle", [intc_phandle]))
 

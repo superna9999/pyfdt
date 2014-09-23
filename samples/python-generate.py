@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from pyfdt import *
 
-phandle = 0
+phandle = 1
 
 root = pyfdt.FdtNode("/")
 chosen = pyfdt.FdtNode("chosen")
