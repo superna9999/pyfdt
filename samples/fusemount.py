@@ -13,26 +13,6 @@ from stat import S_IFDIR, S_IFLNK, S_IFREG
 from time import time
 import argparse
 
-def fdtgetpath(fdt, path):
-    if not path.startswith('/'):
-        return None
-    cur = fdt.get_rootnode()
-    if path == "/":
-        return cur
-    subs = path[1:].split("/")
-    for sub in subs:
-        found = False
-        if not isinstance(cur, pyfdt.FdtNode):
-            return None
-        for node in cur:
-            if sub == node.get_name():
-                cur = node
-                found = True
-                break
-        if not found:
-            return None
-    return cur
-
 class DtbMount(Operations):
 
     def __init__(self, fdt):
@@ -40,7 +20,7 @@ class DtbMount(Operations):
         self.fd = 0
 
     def getattr(self, path, fh=None):
-        node = fdtgetpath(self.fdt, path)
+        node = self.fdt.resolve_path(path)
         if isinstance(node, pyfdt.FdtNode):
             return dict(st_mode=(S_IFDIR | 0755), st_ctime=time(), 
                         st_mtime=time(), st_atime=time(), st_nlink=2)
@@ -51,20 +31,20 @@ class DtbMount(Operations):
         return -1
 
     def readdir(self, path, fh):
-        node = fdtgetpath(self.fdt, path)
+        node = self.fdt.resolve_path(path)
         if isinstance(node, pyfdt.FdtNode):
             return ['.', '..'] + [subnode.get_name() for subnode in node]
         return -1
 
     def open(self, path, flags):
-        node = fdtgetpath(self.fdt, path)
+        node = self.fdt.resolve_path(path)
         if not isinstance(node, pyfdt.FdtNode):
             self.fd += 1
             return self.fd
         return -1
 
     def read(self, path, length, offset, fh):
-        node = fdtgetpath(self.fdt, path)
+        node = self.fdt.resolve_path(path)
         if not isinstance(node, pyfdt.FdtNode):
             return node.to_raw()[offset:(length-offset)]
         return -1

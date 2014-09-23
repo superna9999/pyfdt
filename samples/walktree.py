@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+
+from pyfdt import *
+import argparse
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Device Tree Blob Dump PATHS')
+    parser.add_argument('filename', help="input dtb filename")
+    args = parser.parse_args()
+
+    with open(args.filename) as infile:
+        dtb = pyfdt.FdtBlobParse(infile)
+
+    fdt = dtb.to_fdt()
+
+    for path in fdt.resolve_path('/').walk():
+        print path

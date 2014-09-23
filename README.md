@@ -11,8 +11,6 @@ The library future is to add the following features :
 
  - Node manipulation (list, delete attributes)
  - Attributes manipulation
- - Tree walkthrought
- - Device Tree path resolution
 
 No DTS parser/compiler is event considered since "dtc" is the official compiler, but i'm open to any compiler implementation over pyfdt...
 
@@ -30,6 +28,7 @@ The samples directory shows how to :
  - dtbtodts.py : how to convert from DTB to DTS
  - fusemount.py : how to mount the DTB into a Device Tree filesystem you can recompile using dtc
  - python-generate.py : generate a FDT in 100% python and generate a DTS from it
+ - walktree.py : List all paths of the device tree
 
 [Device Tree Wiki](http://www.devicetree.org)
 [Device Tree Compiler](http://www.devicetree.org/Device_Tree_Compiler)

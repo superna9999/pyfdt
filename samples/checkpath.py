@@ -3,28 +3,6 @@
 from pyfdt import *
 import argparse
 
-def fdtgetpath(fdt, path):
-    if not path.startswith('/'):
-        return None
-    cur = fdt.get_rootnode()
-    if path == "/":
-        return cur
-    subs = path[1:].split("/")
-    for sub in subs:
-        print "search %s in %s" % (sub, cur.get_name())
-        found = False
-        if not isinstance(cur, pyfdt.FdtNode):
-            return None
-        for node in cur:
-            print "%s : %s" % (node.get_name(), node)
-            if sub == node.get_name():
-                cur = node
-                found = True
-                break
-        if not found:
-            return None
-    return cur
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Blob FUSE mount')
     parser.add_argument('filename', help="input dtb filename")
@@ -36,4 +14,10 @@ if __name__ == '__main__':
 
     fdt = dtb.to_fdt()
 
-    print fdtgetpath(fdt, args.path)
+    node = fdt.resolve_path(args.path)
+    if isinstance(node, pyfdt.FdtNode):
+        print node
+        for subnode in node:
+            print '\t%s' % subnode
+    else:
+        print node

@@ -53,6 +53,10 @@ class FdtProperty(object):
         """Get property name"""
         return self.name
 
+    def __str__(self):
+        """String representation"""
+        return "Property(%s)" % self.name
+
     def dts_represent(self, depth=0):
         """Get dts string representation"""
         return INDENT*depth + self.name + ';'
@@ -174,7 +178,7 @@ class FdtPropertyStrings(FdtProperty):
 
     def __str__(self):
         """String representation"""
-        return "Property(Strings:%s)" % self.strings
+        return "Property(%s,Strings:%s)" % (self.name, self.strings)
 
     def __getitem__(self, index):
         """Get strings, returns a string"""
@@ -228,7 +232,7 @@ class FdtPropertyWords(FdtProperty):
 
     def __str__(self):
         """String representation"""
-        return "Property(Words:%s)" % self.words
+        return "Property(%s,Words:%s)" % (self.name, self.words)
 
     def __getitem__(self, index):
         """Get words, returns a word integer"""
@@ -280,7 +284,7 @@ class FdtPropertyBytes(FdtProperty):
 
     def __str__(self):
         """String representation"""
-        return "Property(Bytes:%s)" % self.bytes
+        return "Property(%s,Bytes:%s)" % (self.name, self.bytes)
 
     def __getitem__(self, index):
         """Get bytes, returns a byte"""
@@ -300,6 +304,10 @@ class FdtNop(object):  # pylint: disable-msg=R0903
     def get_name(self):  # pylint: disable-msg=R0201
         """Return name"""
         return None
+
+    def __str__(self):
+        """String representation"""
+        return ''
 
     def dts_represent(self, depth=0):  # pylint: disable-msg=R0201
         """Get dts string representation"""
@@ -388,6 +396,31 @@ class FdtNode(object):
     def __len__(self):
         """Get strings count"""
         return len(self.subdata)
+
+    def walk(self):
+        """Walk into subnodes and yield paths"""
+        node = self
+        start = 0
+        hist = []
+        curpath = []
+
+        while True:
+            for index in range(start, len(node)):
+                yield '/' + '/'.join(curpath+[node[index].get_name()])
+                if isinstance(node[index], FdtNode):
+                    if len(node[index]):
+                        hist.append((node, index+1))
+                        curpath.append(node[index].get_name())
+                        node = node[index]
+                        start = 0
+                        index = -1
+                        break
+            if index >= 0:
+                if len(hist):
+                    (node, start) = hist.pop()
+                    curpath.pop()
+                else:
+                    break
 
 
 class Fdt(object):
@@ -507,6 +540,30 @@ class Fdt(object):
             blob_header += pack('>I', self.header['size_dt_struct'])
         return blob_header + blob_reserve_entries + blob_dt + blob_strings
 
+    def resolve_path(self, path):
+        """Resolve path like /memory/reg and return either a FdtNode,
+            a FdtProperty or None"""
+        if self.rootnode is None:
+            return None
+        if not path.startswith('/'):
+            return None
+        if len(path) > 1 and path.endswith('/'):
+            path = path[:-1]
+        if path == '/':
+            return self.rootnode
+        curnode = self.rootnode
+        for subpath in path[1:].split('/'):
+            found = None
+            if not isinstance(curnode, FdtNode):
+                return None
+            for node in curnode:
+                if subpath == node.get_name():
+                    found = node
+                    break
+            if found is None:
+                return None
+            curnode = found
+        return curnode
 
 class FdtBlobParse(object):  # pylint: disable-msg=R0903
     """Parse from file input"""
