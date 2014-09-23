@@ -2,6 +2,8 @@
 
 set -e
 
+cd `dirname $0`
+
 DTB_TESTS="
 addresses.test.dtb                   moved.test_tree1.dtb                               reg-ranges-root.dts.test.dtb
 aliases.dtb                                                                             repacked.v16.mst.test_tree1.dtb
@@ -119,7 +121,7 @@ echo "Running pyfdt generation Tests..."
 for dtb in $PYFDT_TESTS; do
     TESTS=`expr $TESTS + 1`
     echo "TEST $dtb..."
-    if ! ./genfdt.py $dtb ; then
+    if ! PYTHONPATH=$PWD/../ ./genfdt.py $dtb ; then
         echo "FAIL generating $dtb"
         FAIL=`expr $FAIL + 1`
         FAILED="$FAILED $dtb"

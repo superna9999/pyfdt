@@ -3,4 +3,4 @@ python:
   - "2.6"
   - "2.7"
 # run tests
-script: (cd tests && ./do_tests.bash)
+script: tests/do_tests.bash
