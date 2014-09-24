@@ -29,6 +29,7 @@ The samples directory shows how to :
  - fusemount.py : how to mount the DTB into a Device Tree filesystem you can recompile using dtc
  - python-generate.py : generate a FDT in 100% python and generate a DTS from it
  - walktree.py : List all paths of the device tree
+ - fstodtb.py : Device Tree blob creation from Filesystem device tree like DTC
 
 [Device Tree Wiki](http://www.devicetree.org)
 [Device Tree Compiler](http://www.devicetree.org/Device_Tree_Compiler)

@@ -20,6 +20,7 @@ Device Tree Blob Parser
 """
 
 import string
+import os
 from struct import Struct, unpack, pack
 
 FDT_MAGIC = 0xd00dfeed
@@ -564,6 +565,38 @@ class Fdt(object):
                 return None
             curnode = found
         return curnode
+
+
+def FdtFsParse(path):
+    """Parse device tree filesystem and return a Fdt instance
+       Should be /proc/device-tree on a device, or the fusemount.py
+       mount point.
+    """
+    root = FdtNode("/")
+
+    if path.endswith('/'):
+        path = path[:-1]
+
+    nodes = {path: root}
+
+    for subpath, subdirs, files in os.walk(path):
+        if subpath not in nodes.keys():
+            raise Exception("os.walk error")
+        cur = nodes[subpath]
+        for f in files:
+            with open(subpath+'/'+f, 'r') as content_file:
+                content = content_file.read()
+            prop = FdtProperty.new_raw_property(f, content)
+            cur.add_subnode(prop)
+        for subdir in subdirs:
+            subnode = FdtNode(subdir)
+            cur.add_subnode(subnode)
+            subnode.set_parent_node(cur)
+            nodes[subpath+'/'+subdir] = subnode
+    
+    fdt = Fdt()
+    fdt.add_rootnode(root)
+    return fdt
 
 class FdtBlobParse(object):  # pylint: disable-msg=R0903
     """Parse from file input"""
