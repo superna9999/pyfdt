@@ -138,9 +138,9 @@ class FdtPropertyStrings(FdtProperty):
         for stri in strings:
             if len(stri) == 0:
                 raise Exception("Invalid strings")
-            if any([True for char in name
+            if any([True for char in stri
                         if char not in string.printable 
-                        or char in ('\r', '\n')]):
+                           or char in ('\r', '\n')]):
                 raise Exception("Invalid chars in strings")
         self.strings = strings
 
@@ -196,6 +196,9 @@ class FdtPropertyWords(FdtProperty):
     def __init__(self, name, words):
         """Init with words"""
         FdtProperty.__init__(self, name)
+        for word in words:
+            if not 0 <= word <= 4294967295:
+                raise Exception("Invalid word value, requires 0 <= number <= 4294967295")
         if not len(words):
             raise Exception("Invalid Words")
         self.words = words
@@ -245,11 +248,14 @@ class FdtPropertyWords(FdtProperty):
 
 
 class FdtPropertyBytes(FdtProperty):
-    """Property with bytes as value"""
+    """Property with signed bytes as value"""
 
     def __init__(self, name, bytez):
         """Init with bytes"""
         FdtProperty.__init__(self, name)
+        for byte in bytez:
+            if not -128 <= byte <= 127:
+                raise Exception("Invalid value for byte, requires -128 <= number <= 127")
         if not bytez:
             raise Exception("Invalid Bytes")
         self.bytes = bytez
@@ -342,13 +348,23 @@ class FdtNode(object):
         """Get property name"""
         return self.name
 
-    def add_raw_attribute(self, name, raw_value):
-        """Construct a raw attribute and add to child"""
-        self.subdata.append(FdtProperty.new_raw_property(name, raw_value))
+    def __check_name_duplicate(self, name):
+        """Checks if name is not in a subnode"""
+        for data in self.subdata:
+            if not isinstance(data, FdtNop) \
+               and data.get_name() == name:
+                   return True
+        return False
 
     def add_subnode(self, node):
         """Add child"""
+        if self.__check_name_duplicate(node.get_name()):
+            raise Exception("%s : %s subnode already exists" % (self, node))
         self.subdata.append(node)
+
+    def add_raw_attribute(self, name, raw_value):
+        """Construct a raw attribute and add to child"""
+        self.add_subnode(FdtProperty.new_raw_property(name, raw_value))
 
     def set_parent_node(self, node):
         """Set parent node"""
@@ -394,9 +410,52 @@ class FdtNode(object):
         """Get subnodes, returns either a Node, a Property or a Nop"""
         return self.subdata[index]
 
+    def __setitem__(self, index, subnode):
+        """Set node at index, replacing previous subnode, must not be a duplicate name"""
+        if self.subdata[index].get_name() != subnode.get_name() and \
+           self.__check_name_duplicate(subnode.get_name()):
+            raise Exception("%s : %s subnode already exists" % (self, subnode))
+        self.subdata[index] = subnode
+
     def __len__(self):
         """Get strings count"""
         return len(self.subdata)
+
+    def append(self, subnode):
+        """Append subnode, same as add_subnode"""
+        if self.__check_name_duplicate(subnode.get_name()):
+            raise Exception("%s : %s subnode already exists" % (self, subnode))
+        self.subdata.append(subnode)
+
+    def pop(self, index=-1):
+        """Remove and returns subnode at index, default the last"""
+        return self.subdata.pop(index)
+
+    def insert(self, index, subnode):
+        """Insert subnode before index, must not be a duplicate name"""
+        if self.__check_name_duplicate(subnode.get_name()):
+            raise Exception("%s : %s subnode already exists" % (self, subnode))
+        self.subdata.insert(index, subnode)
+
+    def remove(self, name):
+        """Remove subnode with the name
+           Raises ValueError is not present
+        """
+        for i in range(0, len(self.subdata)):
+            if not isinstance(self.subdata[i], FdtNop) and \
+               name == self.subdata[i].get_name():
+                return self.subdata.pop(i)
+        raise ValueError("Not present")
+
+    def index(self, name):
+        """Returns position of subnode with the name
+           Raises ValueError is not present
+        """
+        for i in range(0, len(self.subdata)):
+            if not isinstance(self.subdata[i], FdtNop) and \
+               name == self.subdata[i].get_name():
+                return i
+        raise ValueError("Not present")
 
     def walk(self):
         """Walk into subnodes and yield paths"""
@@ -428,6 +487,7 @@ class Fdt(object):
     """Flattened Device Tree representation"""
 
     def __init__(self, version=17, last_comp_version=16, boot_cpuid_phys=0):
+        """Init FDT object with version and boot values"""
         self.header = {'magic': FDT_MAGIC,
                        'totalsize': 0,
                        'off_dt_struct': 0,
@@ -508,6 +568,10 @@ class Fdt(object):
             header_size += 4
         if self.header['version'] >= 17:
             header_size += 4
+        header_adjust = ''
+        if header_size % 8 != 0:
+            header_adjust = '\0'*(8 - (header_size % 8))
+            header_size += len(header_adjust)
         dt_start = header_size + len(blob_reserve_entries)
         # print "dt_start %d" % dt_start
         (blob_dt, blob_strings, dt_pos) = \
@@ -539,7 +603,7 @@ class Fdt(object):
             blob_header += pack('>I', self.header['size_dt_strings'])
         if self.header['version'] >= 17:
             blob_header += pack('>I', self.header['size_dt_struct'])
-        return blob_header + blob_reserve_entries + blob_dt + blob_strings
+        return blob_header + header_adjust + blob_reserve_entries + blob_dt + blob_strings
 
     def resolve_path(self, path):
         """Resolve path like /memory/reg and return either a FdtNode,

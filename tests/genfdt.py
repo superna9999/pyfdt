@@ -2,6 +2,188 @@
 from pyfdt import *
 import argparse
 
+def manip_setitem():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root[0] = FdtPropertyWords("#address-cells", [1])
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_bad_setitem():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("test", [2]))
+    root[1] = FdtPropertyWords("#address-cells", [1])
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_append():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.append(FdtPropertyWords("#test", [2]))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_dup_append():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.append(FdtPropertyWords("#address-cells", [1]))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_pop():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("#yop", [2]))
+    if root.pop().get_name() != "#yop":
+        raise Exception("Bad poped subnode")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_empty_pop():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.pop()
+    root.pop()
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_insert():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("abc", [2]))
+    root.insert(1, FdtPropertyWords("def", [2]))
+    if root[1].get_name() != "def":
+        raise Exception("Bad inserted subnode")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_dup_insert():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("abc", [1]))
+    root.insert(1, FdtPropertyWords("abc", [1]))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_remove():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("abc", [1]))
+    root.remove("abc")
+    if len(root) == 2 or root[0].get_name() != "#address-cells":
+        raise Exception("subnode bad removed")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_noexist_remove():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.remove("abc")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_index():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("abc", [1]))
+    if root.index("abc") != 1:
+        raise Exception("subnode bad index")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_noexist_index():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.index("abc")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_dup():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_nobyte():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyBytes("test", []))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_badbyte():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyBytes("test", [0x1FF]))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_noword():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", []))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_badword():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("#address-cells", [0xFFFFFFFFFFFF]))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_emptystr():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyStrings("model", ["ok", '']))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_badstr():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyStrings("model", ['\xc3\xa9']))
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def gen_norootnode():
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    return fdt
+
 def gen_v1():
     root = pyfdt.FdtNode("/")
 
@@ -104,7 +286,31 @@ def gen_basic():
 def error():
     raise Exception("Test Name Error")
 
-tests = {'basic' : gen_basic, "gen_v1" : gen_v1, "gen_v2" : gen_v2, "gen_v3" : gen_v3}
+tests = {'basic' : gen_basic, 
+         "gen_v1" : gen_v1, 
+         "gen_v2" : gen_v2, 
+         "gen_v3" : gen_v3,
+         "gen_dup" : gen_dup,
+         "gen_nobyte" : gen_nobyte,
+         "gen_badbyte" : gen_badbyte,
+         "gen_noword" : gen_noword,
+         "gen_badword" : gen_badword,
+         "gen_emptystr" : gen_emptystr,
+         "gen_badstr" : gen_badstr,
+         "gen_norootnode" : gen_norootnode,
+         "manip_setitem": manip_setitem,
+         "manip_append": manip_append,
+         "manip_pop": manip_pop,
+         "manip_insert": manip_insert,
+         "manip_remove": manip_remove,
+         "manip_index": manip_index,
+         "manip_bad_setitem": manip_bad_setitem,
+         "manip_dup_append": manip_dup_append,
+         "manip_empty_pop": manip_empty_pop,
+         "manip_dup_insert": manip_dup_insert,
+         "manip_noexist_remove": manip_noexist_remove,
+         "manip_noexist_index": manip_noexist_index,
+         }
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Generator')

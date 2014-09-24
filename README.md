@@ -4,13 +4,18 @@ The pyfdt library is aimed to facilitate manipulation of the flattened device tr
 
 It is highly based on fdtdump for the dtc compiler package.
 
-Device Tree Blob (.dtb) input is actually the only input format accepted, but either Device Tree Blob (DTB) or Device Tree Structure (text DTS) is available as output format.
+Device Tree Blob (.dtb) input and Filesystem the accepted input formats and either Device Tree Blob (DTB) or Device Tree Structure (text DTS) is available as output format.
 Device Tree filesystem 'output' is available via the fusemount.py FUSE sample using [fusepy](https://github.com/terencehonles/fusepy) library.
 
-The library future is to add the following features :
+The object data permits :
+ - add/delete/pop nodes and attributes
+ - create attributes dynamically with native python types
+ - walk throught the tree
+ - resolve and generate "paths"
+ - parse from DTB or filesystem
+ - output DTB or DTS
 
- - Node manipulation (list, delete attributes)
- - Attributes manipulation
+Any API, code, syntax, tests or whatever enhancement is welcomed, but consider this an alpha version project not yet used in production.
 
 No DTS parser/compiler is event considered since "dtc" is the official compiler, but i'm open to any compiler implementation over pyfdt...
 
