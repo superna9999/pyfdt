@@ -4,7 +4,16 @@ The pyfdt library is aimed to facilitate manipulation of the flattened device tr
 
 It is highly based on fdtdump for the dtc compiler package.
 
-Device Tree Blob (.dtb) input and Filesystem the accepted input formats and either Device Tree Blob (DTB) or Device Tree Structure (text DTS) is available as output format.
+Support Inputs :
+ - Device Tree Blob (.dtb)
+ - Filesystem
+ - JSON (See JSONDeviceTree.md)
+
+Supported Outputs :
+ - Device Tree Blob (DTB)
+ - Device Tree Structure (text DTS)
+ - JSON (See JSONDeviceTree.md)
+
 Device Tree filesystem 'output' is available via the fusemount.py FUSE sample using [fusepy](https://github.com/terencehonles/fusepy) library.
 
 The object data permits :
@@ -14,6 +23,9 @@ The object data permits :
  - resolve and generate "paths"
  - parse from DTB or filesystem
  - output DTB or DTS
+ - output JSON
+ - compare two tree
+ - merge two trees
 
 Any API, code, syntax, tests or whatever enhancement is welcomed, but consider this an alpha version project not yet used in production.
 
