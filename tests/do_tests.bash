@@ -189,6 +189,15 @@ for dtb in $DTB_TESTS; do
             FAILED="$FAILED $dtb"
             continue
         fi
+        ../dtbdump.py --format json $dtb $dtb.json
+        if ! ./dtbcheckequal.py --format1 dtb --format2 json $dtb $dtb.json ; then
+            echo "FAIL json diff : $dtb see $dtb.result_"
+            hd < $dtb > $dtb.hex
+            hd < dtc/tests/$dtb > $dtb.orig.hex
+            FAIL=`expr $FAIL + 1`
+            FAILED="$FAILED $dtb"
+            continue
+        fi
         if echo $MUST_FAIL  | grep -q $dtb; then
             echo "ERROR $dtb should have failed"
             FAIL=`expr $FAIL + 1`
@@ -233,6 +242,8 @@ manip_noexist_index
 manip_simple_merge
 manip_badobj_merge
 manip_subtree_merge
+manip_simple_cmp_tree
+manip_subtree_cmp_tree
 "
 
 PYFDT_TESTS_FAILS="

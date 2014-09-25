@@ -21,6 +21,7 @@ Device Tree Blob Parser
 
 import string
 import os
+import json
 from copy import deepcopy, copy
 from struct import Struct, unpack, pack
 
@@ -74,6 +75,10 @@ class FdtProperty(object):
         return (pack('>III', FDT_PROP, 0, strpos),
                 string_store, pos)
 
+    def json_represent(self, depth=0):
+        """Ouput JSON"""
+        return '%s: null' % json.dumps(self.name)
+
     def to_raw(self):
         """Return RAW value representation"""
         return ''
@@ -81,6 +86,21 @@ class FdtProperty(object):
     def __getitem__(self, value):
         """Returns No Items"""
         return None
+
+    def __ne__(self, node):
+        """Check property inequality
+        """
+        return not self.__eq__(node)
+
+    def __eq__(self, node):
+        """Check node equality
+           check properties are the same (same values)
+        """
+        if not isinstance(node, FdtProperty):
+            raise Exception("Invalid object type")
+        if self.name != node.get_name():
+            return False
+        return True
 
     @staticmethod
     def __check_prop_strings(value):
@@ -174,6 +194,13 @@ class FdtPropertyStrings(FdtProperty):
         pos += len(blob)
         return (blob, string_store, pos)
 
+    def json_represent(self, depth=0):
+        """Ouput JSON"""
+        result = '%s: ["strings", ' % json.dumps(self.name)
+        result += ', '.join([json.dumps(stri) for stri in self.strings])
+        result += ']'
+        return result
+
     def to_raw(self):
         """Return RAW value representation"""
         return ''.join([chars+'\0' for chars in self.strings])
@@ -190,6 +217,18 @@ class FdtPropertyStrings(FdtProperty):
         """Get strings count"""
         return len(self.strings)
 
+    def __eq__(self, node):
+        """Check node equality
+           check properties are the same (same values)
+        """
+        if not FdtProperty.__eq__(self, node):
+            return False
+        if self.__len__() != len(node):
+            return False
+        for index in range(self.__len__()):
+            if self.strings[index] != node[index]:
+                return False
+        return True
 
 class FdtPropertyWords(FdtProperty):
     """Property with words as value"""
@@ -199,7 +238,7 @@ class FdtPropertyWords(FdtProperty):
         FdtProperty.__init__(self, name)
         for word in words:
             if not 0 <= word <= 4294967295:
-                raise Exception("Invalid word value, requires 0 <= number <= 4294967295")
+                raise Exception("Invalid word value %d, requires 0 <= number <= 4294967295" % word)
         if not len(words):
             raise Exception("Invalid Words")
         self.words = words
@@ -231,6 +270,13 @@ class FdtPropertyWords(FdtProperty):
         pos += len(blob)
         return (blob, string_store, pos)
 
+    def json_represent(self, depth=0):
+        """Ouput JSON"""
+        result = '%s: ["words", "' % json.dumps(self.name)
+        result += '", "'.join(["0x%08x" % word for word in self.words])
+        result += '"]'
+        return result
+
     def to_raw(self):
         """Return RAW value representation"""
         return ''.join([pack('>I', word) for word in self.words])
@@ -247,6 +293,19 @@ class FdtPropertyWords(FdtProperty):
         """Get words count"""
         return len(self.words)
 
+    def __eq__(self, node):
+        """Check node equality
+           check properties are the same (same values)
+        """
+        if not FdtProperty.__eq__(self, node):
+            return False
+        if self.__len__() != len(node):
+            return False
+        for index in range(self.__len__()):
+            if self.words[index] != node[index]:
+                return False
+        return True
+
 
 class FdtPropertyBytes(FdtProperty):
     """Property with signed bytes as value"""
@@ -256,7 +315,7 @@ class FdtPropertyBytes(FdtProperty):
         FdtProperty.__init__(self, name)
         for byte in bytez:
             if not -128 <= byte <= 127:
-                raise Exception("Invalid value for byte, requires -128 <= number <= 127")
+                raise Exception("Invalid value for byte %d, requires -128 <= number <= 127" % byte)
         if not bytez:
             raise Exception("Invalid Bytes")
         self.bytes = bytez
@@ -286,6 +345,14 @@ class FdtPropertyBytes(FdtProperty):
         pos += len(blob)
         return (blob, string_store, pos)
 
+    def json_represent(self, depth=0):
+        """Ouput JSON"""
+        result = '%s: ["bytes", "' % json.dumps(self.name)
+        result += '", "'.join(["%02x" % byte
+                                for byte in self.bytes])
+        result += '"]'
+        return result
+
     def to_raw(self):
         """Return RAW value representation"""
         return ''.join([pack('>b', byte) for byte in self.bytes])
@@ -301,6 +368,19 @@ class FdtPropertyBytes(FdtProperty):
     def __len__(self):
         """Get strings count"""
         return len(self.bytes)
+
+    def __eq__(self, node):
+        """Check node equality
+           check properties are the same (same values)
+        """
+        if not FdtProperty.__eq__(self, node):
+            return False
+        if self.__len__() != len(node):
+            return False
+        for index in range(self.__len__()):
+            if self.bytes[index] != node[index]:
+                return False
+        return True
 
 
 class FdtNop(object):  # pylint: disable-msg=R0903
@@ -392,11 +472,11 @@ class FdtNode(object):
     def dtb_represent(self, strings_store, pos=0, version=17):
         """Get blob representation
            Pass string storage as strings_store, pos for current node start
-           ans version as current dtb version
+           and version as current dtb version
         """
         # print "%x:%s" % (pos, self)
         strings = strings_store
-        if self.get_name() == '\\':
+        if self.get_name() == '/':
             blob = pack('>II', FDT_BEGIN_NODE, 0)
         else:
             blob = pack('>I', FDT_BEGIN_NODE)
@@ -411,15 +491,32 @@ class FdtNode(object):
         blob += pack('>I', FDT_END_NODE)
         return (blob, strings, pos)
 
+    def json_represent(self, depth=0):
+        """Get dts string representation"""
+        result = (',\n'+ \
+                  INDENT*(depth+1)).join([sub.json_represent(depth+1)
+                                          for sub in self.subdata
+                                          if not isinstance(sub, FdtNop)])
+        if len(result) > 0:
+            result = INDENT + result + '\n'+INDENT*depth
+        if self.get_name() == '/':
+            return "{\n" + INDENT*(depth) + result + "}"
+        else:
+            return json.dumps(self.name) + ': {\n' + \
+                   INDENT*(depth) + result + "}"
+
     def __getitem__(self, index):
         """Get subnodes, returns either a Node, a Property or a Nop"""
         return self.subdata[index]
 
     def __setitem__(self, index, subnode):
-        """Set node at index, replacing previous subnode, must not be a duplicate name"""
+        """Set node at index, replacing previous subnode, 
+           must not be a duplicate name
+        """
         if self.subdata[index].get_name() != subnode.get_name() and \
            self.__check_name_duplicate(subnode.get_name()):
-            raise Exception("%s : %s subnode already exists" % (self, subnode))
+            raise Exception("%s : %s subnode already exists" % \
+                                        (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
             raise Exception("Invalid object type")
         self.subdata[index] = subnode
@@ -428,10 +525,42 @@ class FdtNode(object):
         """Get strings count"""
         return len(self.subdata)
 
+    def __ne__(self, node):
+        """Check node inequality
+           i.e. is subnodes are the same, in either order
+           and properties are the same (same values)
+           The FdtNop is excluded from the check
+        """
+        return not self.__eq__(node)
+
+    def __eq__(self, node):
+        """Check node equality
+           i.e. is subnodes are the same, in either order
+           and properties are the same (same values)
+           The FdtNop is excluded from the check
+        """
+        if not isinstance(node, FdtNode):
+            raise Exception("Invalid object type")
+        if self.name != node.get_name():
+            return False
+        curnames = set([subnode.get_name() for subnode in self.subdata
+                                    if not isinstance(subnode, FdtNop)])
+        cmpnames = set([subnode.get_name() for subnode in node
+                                    if not isinstance(subnode, FdtNop)])
+        if curnames != cmpnames:
+            return False
+        for subnode in [subnode for subnode in self.subdata
+                                    if not isinstance(subnode, FdtNop)]:
+            index = node.index(subnode.get_name())
+            if subnode != node[index]:
+                return False
+        return True
+
     def append(self, subnode):
         """Append subnode, same as add_subnode"""
         if self.__check_name_duplicate(subnode.get_name()):
-            raise Exception("%s : %s subnode already exists" % (self, subnode))
+            raise Exception("%s : %s subnode already exists" % \
+                                    (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
             raise Exception("Invalid object type")
         self.subdata.append(subnode)
@@ -443,7 +572,8 @@ class FdtNode(object):
     def insert(self, index, subnode):
         """Insert subnode before index, must not be a duplicate name"""
         if self.__check_name_duplicate(subnode.get_name()):
-            raise Exception("%s : %s subnode already exists" % (self, subnode))
+            raise Exception("%s : %s subnode already exists" % \
+                                (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
             raise Exception("Invalid object type")
         self.subdata.insert(index, subnode)
@@ -505,7 +635,8 @@ class FdtNode(object):
         while True:
             for index in range(start, len(node)):
                 if isinstance(node[index], (FdtNode, FdtProperty)):
-                    yield ('/' + '/'.join(curpath+[node[index].get_name()]), node[index])
+                    yield ('/' + '/'.join(curpath+[node[index].get_name()]), 
+                            node[index])
                 if isinstance(node[index], FdtNode):
                     if len(node[index]):
                         hist.append((node, index+1))
@@ -644,6 +775,12 @@ class Fdt(object):
             blob_header += pack('>I', self.header['size_dt_struct'])
         return blob_header + header_adjust + blob_reserve_entries + blob_dt + blob_strings
 
+    def to_json(self):
+        """Ouput JSON"""
+        if self.rootnode is None:
+            return None
+        return self.rootnode.json_represent()
+
     def resolve_path(self, path):
         """Resolve path like /memory/reg and return either a FdtNode,
             a FdtProperty or None"""
@@ -669,6 +806,47 @@ class Fdt(object):
             curnode = found
         return curnode
 
+def _add_json_to_fdtnode(node, subjson):
+    """Populate FdtNode with JSON dict items"""
+    for (key, value) in subjson.items():
+        if isinstance(value, dict):
+            subnode = FdtNode(key.encode('ascii'))
+            subnode.set_parent_node(node)
+            node.append(subnode)
+            _add_json_to_fdtnode(subnode, value)
+        elif isinstance(value, list):
+            if len(value) < 2:
+                raise Exception("Invalid list for %s" % key)
+            if value[0] == "words":
+                words = [int(word, 16) for word in value[1:]]
+                node.append(FdtPropertyWords(key.encode('ascii'), words))
+            elif value[0] == "bytes":
+                bytez = [int(byte, 16) for byte in value[1:]]
+                node.append(FdtPropertyBytes(key.encode('ascii'), bytez))
+            elif value[0] == "strings":
+                node.append(FdtPropertyStrings(key.encode('ascii'), \
+                            [s.encode('ascii') for s in value[1:]]))
+            else:
+                raise Exception("Invalid list for %s" % key)
+        elif value is None:
+            node.append(FdtProperty(key.encode('ascii')))
+        else:
+            raise Exception("Invalid value for %s" % key)
+
+def FdtJsonParse(buf):
+    """Import FDT from JSON representation, see JSONDeviceTree.md for
+       structure and encoding
+       Returns an Fdt object
+    """
+    tree = json.loads(buf)
+
+    root = FdtNode('/')
+
+    _add_json_to_fdtnode(root, tree)
+
+    fdt = Fdt()
+    fdt.add_rootnode(root)
+    return fdt
 
 def FdtFsParse(path):
     """Parse device tree filesystem and return a Fdt instance

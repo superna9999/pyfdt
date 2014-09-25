@@ -2,6 +2,48 @@
 from pyfdt import *
 import argparse
 
+def manip_simple_cmp_tree():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyWords("pwet", [2]))
+    root.add_subnode(FdtPropertyWords("#address-cells", [1]))
+
+    root1 = pyfdt.FdtNode("/")
+    root1.add_subnode(FdtPropertyWords("#address-cells", [1]))
+    root1.add_subnode(FdtPropertyWords("pwet", [2]))
+
+    if root1 != root:
+        raise Exception("Tree cmp Failed")
+
+    fdt = pyfdt.Fdt(version=1, last_comp_version=1)
+    fdt.add_rootnode(root)
+    return fdt
+
+def manip_subtree_cmp_tree():
+    root = pyfdt.FdtNode("/")
+    root.add_subnode(FdtPropertyStrings("pwet", ["yo"]))
+    subnode = pyfdt.FdtNode("abc")
+    subnode.add_subnode(FdtProperty("ranges"))
+    subnode.add_subnode(FdtPropertyBytes("#address-cells", [0x12, 0x23]))
+    subnode.set_parent_node(root)
+    root.append(subnode)
+    root.add_subnode(FdtPropertyWords("#address-cells", [3]))
+
+    root1 = pyfdt.FdtNode("/")
+    root1.add_subnode(FdtPropertyWords("#address-cells", [3]))
+    subnode1 = pyfdt.FdtNode("abc")
+    subnode1.add_subnode(FdtPropertyBytes("#address-cells", [0x12, 0x23]))
+    subnode1.add_subnode(FdtProperty("ranges"))
+    subnode1.set_parent_node(root1)
+    root1.append(subnode1)
+    root1.add_subnode(FdtPropertyStrings("pwet", ["yo"]))
+
+    if root1 != root:
+        raise Exception("Tree cmp Failed")
+
+    fdt = pyfdt.Fdt(version=17, last_comp_version=16)
+    fdt.add_rootnode(root)
+    return fdt
+
 def manip_simple_merge():
     root = pyfdt.FdtNode("/")
     root.add_subnode(FdtPropertyWords("#address-cells", [1]))
@@ -44,7 +86,7 @@ def manip_subtree_merge():
     if root[0][0] != 1 \
        or root[1][0][0] != 2  \
        or len(root) != 3 \
-       or subnode2.get_parent_node() != root1 \
+       or id(subnode2.get_parent_node()) != id(root1) \
        or root[2][1].get_name() != "pwet":
         raise Exception("Merge Failed")
 
