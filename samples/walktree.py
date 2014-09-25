@@ -13,5 +13,5 @@ if __name__ == '__main__':
 
     fdt = dtb.to_fdt()
 
-    for path in fdt.resolve_path('/').walk():
+    for (path, node) in fdt.resolve_path('/').walk():
         print path

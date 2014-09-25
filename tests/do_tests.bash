@@ -202,7 +202,7 @@ done
 
 PYFDT_TESTS="
 bad_testname_test
-basic
+gen_basic
 gen_v1
 gen_v2 
 gen_v3
@@ -215,17 +215,24 @@ gen_emptystr
 gen_badstr
 gen_norootnode
 manip_setitem
+manip_replace_setitem
 manip_append
 manip_pop
 manip_insert
 manip_remove
 manip_index
 manip_bad_setitem
+manip_badobj_setitem
 manip_dup_append
+manip_badobj_append
 manip_empty_pop
 manip_dup_insert
+manip_badobj_insert
 manip_noexist_remove
 manip_noexist_index
+manip_simple_merge
+manip_badobj_merge
+manip_subtree_merge
 "
 
 PYFDT_TESTS_FAILS="
@@ -239,11 +246,15 @@ gen_emptystr
 gen_badstr
 gen_norootnode
 manip_bad_setitem
+manip_badobj_setitem
 manip_dup_append
+manip_badobj_append
 manip_empty_pop
 manip_dup_insert
+manip_badobj_insert
 manip_noexist_remove
 manip_noexist_index
+manip_badobj_merge
 "
 
 echo "Running pyfdt generation Tests..."

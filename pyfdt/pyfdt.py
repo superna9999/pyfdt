@@ -21,6 +21,7 @@ Device Tree Blob Parser
 
 import string
 import os
+from copy import deepcopy, copy
 from struct import Struct, unpack, pack
 
 FDT_MAGIC = 0xd00dfeed
@@ -357,17 +358,18 @@ class FdtNode(object):
         return False
 
     def add_subnode(self, node):
-        """Add child"""
-        if self.__check_name_duplicate(node.get_name()):
-            raise Exception("%s : %s subnode already exists" % (self, node))
-        self.subdata.append(node)
+        """Add child, deprecated use append()"""
+        self.append(node)
 
     def add_raw_attribute(self, name, raw_value):
         """Construct a raw attribute and add to child"""
-        self.add_subnode(FdtProperty.new_raw_property(name, raw_value))
+        self.append(FdtProperty.new_raw_property(name, raw_value))
 
     def set_parent_node(self, node):
-        """Set parent node"""
+        """Set parent node, None and FdtNode accepted"""
+        if node is not None and \
+           not isinstance(node, FdtNode):
+            raise Exception("Invalid object type")
         self.parent = node
 
     def get_parent_node(self):
@@ -388,7 +390,10 @@ class FdtNode(object):
                result + INDENT*depth + "};"
 
     def dtb_represent(self, strings_store, pos=0, version=17):
-        """Get blob representation"""
+        """Get blob representation
+           Pass string storage as strings_store, pos for current node start
+           ans version as current dtb version
+        """
         # print "%x:%s" % (pos, self)
         strings = strings_store
         if self.get_name() == '\\':
@@ -415,6 +420,8 @@ class FdtNode(object):
         if self.subdata[index].get_name() != subnode.get_name() and \
            self.__check_name_duplicate(subnode.get_name()):
             raise Exception("%s : %s subnode already exists" % (self, subnode))
+        if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
+            raise Exception("Invalid object type")
         self.subdata[index] = subnode
 
     def __len__(self):
@@ -425,6 +432,8 @@ class FdtNode(object):
         """Append subnode, same as add_subnode"""
         if self.__check_name_duplicate(subnode.get_name()):
             raise Exception("%s : %s subnode already exists" % (self, subnode))
+        if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
+            raise Exception("Invalid object type")
         self.subdata.append(subnode)
 
     def pop(self, index=-1):
@@ -435,30 +444,59 @@ class FdtNode(object):
         """Insert subnode before index, must not be a duplicate name"""
         if self.__check_name_duplicate(subnode.get_name()):
             raise Exception("%s : %s subnode already exists" % (self, subnode))
+        if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
+            raise Exception("Invalid object type")
         self.subdata.insert(index, subnode)
+
+    def _find(self, name):
+        """Find name in subnodes"""
+        for i in range(0, len(self.subdata)):
+            if not isinstance(self.subdata[i], FdtNop) and \
+               name == self.subdata[i].get_name():
+                return i
+        return None
 
     def remove(self, name):
         """Remove subnode with the name
            Raises ValueError is not present
         """
-        for i in range(0, len(self.subdata)):
-            if not isinstance(self.subdata[i], FdtNop) and \
-               name == self.subdata[i].get_name():
-                return self.subdata.pop(i)
-        raise ValueError("Not present")
+        index = self._find(name)
+        if index is None:
+            raise ValueError("Not present")
+        return self.subdata.pop(index)
 
     def index(self, name):
         """Returns position of subnode with the name
            Raises ValueError is not present
         """
-        for i in range(0, len(self.subdata)):
-            if not isinstance(self.subdata[i], FdtNop) and \
-               name == self.subdata[i].get_name():
-                return i
-        raise ValueError("Not present")
+        index = self._find(name)
+        if index is None:
+            raise ValueError("Not present")
+        return index
+
+    def merge(self, node):
+        """Merge two nodes and subnodes
+           Replace current properties with the given properties
+        """
+        if not isinstance(node, FdtNode):
+            raise Exception("Can only merge with a FdtNode")
+        for subnode in [obj for obj in node 
+                        if isinstance(obj, (FdtNode, FdtProperty))]:
+            index = self._find(subnode.get_name())
+            if index is None:
+                dup = deepcopy(subnode)
+                if isinstance(subnode, FdtNode):
+                    dup.set_parent_node(self)
+                self.append(dup)
+            elif isinstance(subnode, FdtNode):
+                self.subdata[index].merge(subnode)
+            else:
+                self.subdata[index] = copy(subnode)
 
     def walk(self):
-        """Walk into subnodes and yield paths"""
+        """Walk into subnodes and yield paths and objects
+           Returns set with (path string, node object)
+        """
         node = self
         start = 0
         hist = []
@@ -466,7 +504,8 @@ class FdtNode(object):
 
         while True:
             for index in range(start, len(node)):
-                yield '/' + '/'.join(curpath+[node[index].get_name()])
+                if isinstance(node[index], (FdtNode, FdtProperty)):
+                    yield ('/' + '/'.join(curpath+[node[index].get_name()]), node[index])
                 if isinstance(node[index], FdtNode):
                     if len(node[index]):
                         hist.append((node, index+1))
