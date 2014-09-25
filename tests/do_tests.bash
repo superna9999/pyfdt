@@ -329,7 +329,7 @@ for failed in $FAILED ; do
     echo $failed
 done
 
-if [ $FAIL -lt 0 ] ; then
+if [ $FAIL -gt 0 ] ; then
     exit 1
 fi
 
