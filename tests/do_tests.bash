@@ -190,7 +190,7 @@ for dtb in $DTB_TESTS; do
             continue
         fi
         ../dtbdump.py --format json $dtb $dtb.json
-        if ! ./dtbcheckequal.py --format1 dtb --format2 json $dtb $dtb.json ; then
+        if ! PYTHONPATH=$PWD/../ ./dtbcheckequal.py --format1 dtb --format2 json $dtb $dtb.json ; then
             echo "FAIL json diff : $dtb see $dtb.result_"
             hd < $dtb > $dtb.hex
             hd < dtc/tests/$dtb > $dtb.orig.hex
