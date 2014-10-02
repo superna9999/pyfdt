@@ -4,13 +4,30 @@ The pyfdt library is aimed to facilitate manipulation of the flattened device tr
 
 It is highly based on fdtdump for the dtc compiler package.
 
-Device Tree Blob (.dtb) input is actually the only input format accepted, but either Device Tree Blob (DTB) or Device Tree Structure (text DTS) is available as output format.
+Support Inputs :
+ - Device Tree Blob (.dtb)
+ - Filesystem
+ - JSON (See JSONDeviceTree.md)
+
+Supported Outputs :
+ - Device Tree Blob (DTB)
+ - Device Tree Structure (text DTS)
+ - JSON (See JSONDeviceTree.md)
+
 Device Tree filesystem 'output' is available via the fusemount.py FUSE sample using [fusepy](https://github.com/terencehonles/fusepy) library.
 
-The library future is to add the following features :
+The object data permits :
+ - add/delete/pop nodes and attributes
+ - create attributes dynamically with native python types
+ - walk throught the tree
+ - resolve and generate "paths"
+ - parse from DTB or filesystem
+ - output DTB or DTS
+ - output JSON
+ - compare two tree
+ - merge two trees
 
- - Node manipulation (list, delete attributes)
- - Attributes manipulation
+Any API, code, syntax, tests or whatever enhancement is welcomed, but consider this an alpha version project not yet used in production.
 
 No DTS parser/compiler is event considered since "dtc" is the official compiler, but i'm open to any compiler implementation over pyfdt...
 
@@ -29,6 +46,7 @@ The samples directory shows how to :
  - fusemount.py : how to mount the DTB into a Device Tree filesystem you can recompile using dtc
  - python-generate.py : generate a FDT in 100% python and generate a DTS from it
  - walktree.py : List all paths of the device tree
+ - fstodtb.py : Device Tree blob creation from Filesystem device tree like DTC
 
 [Device Tree Wiki](http://www.devicetree.org)
 [Device Tree Compiler](http://www.devicetree.org/Device_Tree_Compiler)
