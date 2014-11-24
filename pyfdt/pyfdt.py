@@ -36,6 +36,9 @@ INDENT = ' ' * 4
 
 FDT_MAX_VERSION = 17
 
+VALID_CHARS= set(string.printable) - set('\r\n')
+
+print(sorted(VALID_CHARS))
 
 class FdtProperty(object):
     """ Represents an empty property"""
@@ -44,7 +47,7 @@ class FdtProperty(object):
     def __validate_dt_name(name):
         """Checks the name validity"""
         return not any([True for char in name
-                        if char not in string.printable])
+                        if char not in VALID_CHARS])
 
     def __init__(self, name):
         """Init with name"""
@@ -110,22 +113,30 @@ class FdtProperty(object):
         pos = 0
         posi = 0
         end = len(value)
-        
+
         if not len(value):
             return None
-        
-        if ord(value[-1]) > 0:
+
+        if value[-1] > 0:
             return None
 
         while pos < end:
             posi = pos
-            while pos < end and ord(value[pos]) > 0 \
-                  and value[pos] in string.printable \
-                  and value[pos] not in ('\r', '\n'):
+            while pos < end and value[pos] > 0:
                 pos += 1
 
-            if ord(value[pos]) > 0 or pos == posi:
+            if value[pos] > 0 or pos == posi:
                 return None
+
+            try:
+                print(posi,pos)
+                stri = str(value[posi:pos], 'ascii','strict')
+            except ValueError:
+                return False
+
+            if not all(c in VALID_CHARS for c in stri):
+                return False
+
             pos += 1
 
         return True
@@ -149,7 +160,11 @@ class FdtPropertyStrings(FdtProperty):
     @classmethod
     def __extract_prop_strings(cls, value):
         """Extract strings from raw_value"""
-        return [st for st in value.split('\0') if len(st)]
+        print(value)
+        print(value.split(b'\0'))
+        print([st for st in value.split(b'\0') if len(st)])
+        print([str(st,'ascii') for st in value.split(b'\0') if len(st)])
+        return [str(st,'ascii') for st in value.split(b'\0') if len(st)]
 
     def __init__(self, name, strings):
         """Init with strings"""
@@ -160,8 +175,7 @@ class FdtPropertyStrings(FdtProperty):
             if len(stri) == 0:
                 raise Exception("Invalid strings")
             if any([True for char in stri
-                        if char not in string.printable 
-                           or char in ('\r', '\n')]):
+                        if char not in VALID_CHARS]):
                 raise Exception("Invalid chars in strings")
         self.strings = strings
 
@@ -323,7 +337,7 @@ class FdtPropertyBytes(FdtProperty):
     @classmethod
     def init_raw(cls, name, raw_value):
         """Init from raw"""
-        return cls(name, [unpack('b', byte)[0] for byte in raw_value])
+        return cls(name, raw_value)
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
@@ -415,7 +429,7 @@ class FdtNode(object):
     def __validate_dt_name(name):
         """Checks the name validity"""
         return not any([True for char in name
-                        if char not in string.printable])
+                        if char not in VALID_CHARS])
 
     def __init__(self, name):
         """Init node with name"""
@@ -904,6 +918,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
         header_entry = Struct(">I")
         data = self.infile.read(header.size)
         result = dict(zip(self.__fdt_header_names, header.unpack_from(data)))
+        print(result)
         if result['version'] >= 2:
             data = self.infile.read(header_entry.size)
             result['boot_cpuid_phys'] = header_entry.unpack_from(data)[0]
@@ -930,30 +945,31 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
 
     def __extract_fdt_nodename(self):
         """Extract node name"""
-        data = ''
-        pos = self.infile.tell()
+        data = bytearray()
         while True:
             byte = self.infile.read(1)
-            if ord(byte) == 0:
+            if byte == b'\0':
                 break
             data += byte
-        align_pos = pos + len(data) + 1
+        align_pos = self.infile.tell()
         align_pos = (((align_pos) + ((4) - 1)) & ~((4) - 1))
         self.infile.seek(align_pos)
-        return data
+        print("extracted node name %s", str(data, 'ascii'));
+        return str(data,'ascii')
 
     def __extract_fdt_string(self, prop_string_pos):
         """Extract string from string pool"""
-        data = ''
+        data = bytearray()
         pos = self.infile.tell()
         self.infile.seek(self.fdt_header['off_dt_strings']+prop_string_pos)
         while True:
             byte = self.infile.read(1)
-            if ord(byte) == 0:
+            if byte == b'\0':
                 break
             data += byte
         self.infile.seek(pos)
-        return data
+        print("extracted string %s", str(data, 'ascii'));
+        return str(data,'ascii')
 
     def __extract_fdt_prop(self):
         """Extract property"""
@@ -1000,7 +1016,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
                 propdata = self.__extract_fdt_prop()
                 tags.append((tag, propdata))
             else:
-                print "Unknown Tag %d" % tag
+                print("Unknown Tag %d" % tag)
         return tags
 
     def __init__(self, infile):
