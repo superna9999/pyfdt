@@ -1000,7 +1000,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
                 propdata = self.__extract_fdt_prop()
                 tags.append((tag, propdata))
             else:
-                print "Unknown Tag %d" % tag
+                print("Unknown Tag %d" % tag)
         return tags
 
     def __init__(self, infile):
