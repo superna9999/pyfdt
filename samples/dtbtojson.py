@@ -7,7 +7,7 @@ DTB to DTS
 """
 
 import argparse
-from pyfdt import FdtBlobParse
+from pyfdt.pyfdt import FdtBlobParse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Blob dump')

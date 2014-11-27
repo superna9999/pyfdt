@@ -112,19 +112,28 @@ class FdtProperty(object):
         end = len(value)
         
         if not len(value):
+            return None   
+        
+        #Needed for python 3 support: If a bytes object is passed,
+        #decode it with the ascii codec. If the decoding fails, assume
+        #it was not a string object.
+        try:
+            value = value.decode(encoding = 'ascii')
+        except ValueError:
             return None
         
-        if ord(value[-1]) > 0:
+        #Test both against string 0 and int 0 because of python2/3 compatibility
+        if value[-1] != '\0':
             return None
 
         while pos < end:
             posi = pos
-            while pos < end and ord(value[pos]) > 0 \
+            while pos < end and value[pos] != '\0' \
                   and value[pos] in string.printable \
                   and value[pos] not in ('\r', '\n'):
                 pos += 1
 
-            if ord(value[pos]) > 0 or pos == posi:
+            if value[pos] != '\0' or pos == posi:
                 return None
             pos += 1
 
@@ -149,7 +158,8 @@ class FdtPropertyStrings(FdtProperty):
     @classmethod
     def __extract_prop_strings(cls, value):
         """Extract strings from raw_value"""
-        return [st for st in value.split('\0') if len(st)]
+        return [st for st in \
+            value.decode(encoding = 'ascii').split('\0') if len(st)]
 
     def __init__(self, name, strings):
         """Init with strings"""
@@ -178,14 +188,14 @@ class FdtPropertyStrings(FdtProperty):
     def dtb_represent(self, string_store, pos=0, version=17):
         """Get blob representation"""
         # print "%x:%s" % (pos, self)
-        blob = ''
+        blob = pack('')
         for chars in self.strings:
-            blob += chars + '\0'
+            blob += chars.encode(encoding = 'ascii') + pack('b', 0)
         blob_len = len(blob)
         if version < 16 and (pos+12) % 8 != 0:
-            blob = '\0'*(8-((pos+12) % 8)) + blob
+            blob = pack('b', 0) * (8-((pos+12) % 8)) + blob
         if blob_len % 4:
-            blob += '\0'*(4-(blob_len % 4))
+            blob += pack('b', 0) * (4-(blob_len % 4))
         strpos = string_store.find(self.name+'\0')
         if strpos < 0:
             strpos = len(string_store)
@@ -266,7 +276,7 @@ class FdtPropertyWords(FdtProperty):
             strpos = len(string_store)
             string_store += self.name+'\0'
         blob = pack('>III', FDT_PROP, len(self.words)*4, strpos) + \
-                ''.join([pack('>I', word) for word in self.words])
+                pack('').join([pack('>I', word) for word in self.words])
         pos += len(blob)
         return (blob, string_store, pos)
 
@@ -323,7 +333,7 @@ class FdtPropertyBytes(FdtProperty):
     @classmethod
     def init_raw(cls, name, raw_value):
         """Init from raw"""
-        return cls(name, [unpack('b', byte)[0] for byte in raw_value])
+        return cls(name, unpack('b' * len(raw_value), raw_value))
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
@@ -339,9 +349,9 @@ class FdtPropertyBytes(FdtProperty):
             strpos = len(string_store)
             string_store += self.name+'\0'
         blob = pack('>III', FDT_PROP, len(self.bytes), strpos)
-        blob += ''.join([pack('>b', byte) for byte in self.bytes])
+        blob += pack('').join([pack('>b', byte) for byte in self.bytes])
         if len(blob) % 4:
-            blob += '\0'*(4-(len(blob) % 4))
+            blob += pack('b', 0) * (4-(len(blob) % 4))
         pos += len(blob)
         return (blob, string_store, pos)
 
@@ -480,9 +490,9 @@ class FdtNode(object):
             blob = pack('>II', FDT_BEGIN_NODE, 0)
         else:
             blob = pack('>I', FDT_BEGIN_NODE)
-            blob += self.get_name() + '\0'
+            blob += self.get_name().encode(encoding = 'ascii') + pack('b', 0)
         if len(blob) % 4:
-            blob += '\0'*(4-(len(blob) % 4))
+            blob += pack('b', 0) * (4-(len(blob) % 4))
         pos += len(blob)
         for sub in self.subdata:
             (data, strings, pos) = sub.dtb_represent(strings, pos, version)
@@ -724,7 +734,7 @@ class Fdt(object):
         """Export to Blob format"""
         if self.rootnode is None:
             return None
-        blob_reserve_entries = ''
+        blob_reserve_entries = pack('')
         if self.reserve_entries is not None:
             for entry in self.reserve_entries:
                 blob_reserve_entries += pack('>QQ',
@@ -738,20 +748,20 @@ class Fdt(object):
             header_size += 4
         if self.header['version'] >= 17:
             header_size += 4
-        header_adjust = ''
+        header_adjust = pack('')
         if header_size % 8 != 0:
-            header_adjust = '\0'*(8 - (header_size % 8))
+            header_adjust = pack('b', 0) * (8 - (header_size % 8))
             header_size += len(header_adjust)
         dt_start = header_size + len(blob_reserve_entries)
         # print "dt_start %d" % dt_start
         (blob_dt, blob_strings, dt_pos) = \
             self.rootnode.dtb_represent('', dt_start, self.header['version'])
         if self.prenops is not None:
-            blob_dt = ''.join([nop.dtb_represent('')[0] 
+            blob_dt = pack('').join([nop.dtb_represent('')[0] 
                                for nop in self.prenops])\
                       + blob_dt
         if self.postnops is not None:
-            blob_dt += ''.join([nop.dtb_represent('')[0] 
+            blob_dt += pack('').join([nop.dtb_represent('')[0] 
                                 for nop in self.postnops])
         blob_dt += pack('>I', FDT_END)
         self.header['size_dt_strings'] = len(blob_strings)
@@ -773,7 +783,8 @@ class Fdt(object):
             blob_header += pack('>I', self.header['size_dt_strings'])
         if self.header['version'] >= 17:
             blob_header += pack('>I', self.header['size_dt_struct'])
-        return blob_header + header_adjust + blob_reserve_entries + blob_dt + blob_strings
+        return blob_header + header_adjust + blob_reserve_entries + \
+            blob_dt + blob_strings.encode(encoding = 'ascii')
 
     def to_json(self):
         """Ouput JSON"""
@@ -810,7 +821,7 @@ def _add_json_to_fdtnode(node, subjson):
     """Populate FdtNode with JSON dict items"""
     for (key, value) in subjson.items():
         if isinstance(value, dict):
-            subnode = FdtNode(key.encode('ascii'))
+            subnode = FdtNode(key)
             subnode.set_parent_node(node)
             node.append(subnode)
             _add_json_to_fdtnode(subnode, value)
@@ -819,17 +830,17 @@ def _add_json_to_fdtnode(node, subjson):
                 raise Exception("Invalid list for %s" % key)
             if value[0] == "words":
                 words = [int(word, 16) for word in value[1:]]
-                node.append(FdtPropertyWords(key.encode('ascii'), words))
+                node.append(FdtPropertyWords(key, words))
             elif value[0] == "bytes":
                 bytez = [int(byte, 16) for byte in value[1:]]
-                node.append(FdtPropertyBytes(key.encode('ascii'), bytez))
+                node.append(FdtPropertyBytes(key, bytez))
             elif value[0] == "strings":
-                node.append(FdtPropertyStrings(key.encode('ascii'), \
-                            [s.encode('ascii') for s in value[1:]]))
+                node.append(FdtPropertyStrings(key, \
+                            [s for s in value[1:]]))
             else:
                 raise Exception("Invalid list for %s" % key)
         elif value is None:
-            node.append(FdtProperty(key.encode('ascii')))
+            node.append(FdtProperty(key))
         else:
             raise Exception("Invalid value for %s" % key)
 
@@ -865,7 +876,7 @@ def FdtFsParse(path):
             raise Exception("os.walk error")
         cur = nodes[subpath]
         for f in files:
-            with open(subpath+'/'+f, 'r') as content_file:
+            with open(subpath+'/'+f, 'rb') as content_file:
                 content = content_file.read()
             prop = FdtProperty.new_raw_property(f, content)
             cur.add_subnode(prop)
@@ -936,7 +947,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             byte = self.infile.read(1)
             if ord(byte) == 0:
                 break
-            data += byte
+            data += byte.decode(encoding = 'ascii')
         align_pos = pos + len(data) + 1
         align_pos = (((align_pos) + ((4) - 1)) & ~((4) - 1))
         self.infile.seek(align_pos)
@@ -951,7 +962,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             byte = self.infile.read(1)
             if ord(byte) == 0:
                 break
-            data += byte
+            data += byte.decode(encoding = 'ascii')
         self.infile.seek(pos)
         return data
 
@@ -1000,7 +1011,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
                 propdata = self.__extract_fdt_prop()
                 tags.append((tag, propdata))
             else:
-                print "Unknown Tag %d" % tag
+                print("Unknown Tag %d" % tag)
         return tags
 
     def __init__(self, infile):

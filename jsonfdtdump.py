@@ -9,7 +9,7 @@ See JSONDeviceTree.md for format
 """
 
 import argparse
-from pyfdt import FdtJsonParse
+from pyfdt.pyfdt import FdtJsonParse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Blob JSON to DTB')
