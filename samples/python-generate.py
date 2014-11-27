@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from pyfdt import *
+from pyfdt.pyfdt import *
 
 phandle = 1
 

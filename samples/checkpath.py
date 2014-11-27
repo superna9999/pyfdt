@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from pyfdt import *
+from pyfdt.pyfdt import *
 import argparse
 
 if __name__ == '__main__':

@@ -114,7 +114,7 @@ class FdtProperty(object):
         if not len(value):
             return None
         
-        if ord(value[-1]) > 0:
+        if value[-1] != '\0'.encode(encoding = 'ascii'):
             return None
 
         while pos < end:
@@ -323,7 +323,7 @@ class FdtPropertyBytes(FdtProperty):
     @classmethod
     def init_raw(cls, name, raw_value):
         """Init from raw"""
-        return cls(name, [unpack('b', byte)[0] for byte in raw_value])
+        return cls(name, unpack('b' * len(raw_value), raw_value))
 
     def dts_represent(self, depth=0):
         """Get dts string representation"""
@@ -865,7 +865,7 @@ def FdtFsParse(path):
             raise Exception("os.walk error")
         cur = nodes[subpath]
         for f in files:
-            with open(subpath+'/'+f, 'r') as content_file:
+            with open(subpath+'/'+f, 'rb') as content_file:
                 content = content_file.read()
             prop = FdtProperty.new_raw_property(f, content)
             cur.add_subnode(prop)
@@ -936,7 +936,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             byte = self.infile.read(1)
             if ord(byte) == 0:
                 break
-            data += byte
+            data += byte.decode(encoding = 'ascii')
         align_pos = pos + len(data) + 1
         align_pos = (((align_pos) + ((4) - 1)) & ~((4) - 1))
         self.infile.seek(align_pos)
@@ -951,7 +951,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             byte = self.infile.read(1)
             if ord(byte) == 0:
                 break
-            data += byte
+            data += byte.decode(encoding = 'ascii')
         self.infile.seek(pos)
         return data
 
