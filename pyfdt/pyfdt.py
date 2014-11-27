@@ -112,19 +112,29 @@ class FdtProperty(object):
         end = len(value)
         
         if not len(value):
-            return None
+            return None   
         
-        if value[-1] != '\0'.encode(encoding = 'ascii'):
+        #Needed for python 3 support: If a bytes object is passed,
+        #decode it with the ascii codec. If the decoding fails, assume
+        #it was not a string object.
+        if isinstance(value, bytes):
+            try:
+                value = value.decode(encoding = 'ascii')
+            except ValueError:
+                return None
+        
+        #Test both against string 0 and int 0 because of python2/3 compatibility
+        if value[-1] != '\0':
             return None
 
         while pos < end:
             posi = pos
-            while pos < end and ord(value[pos]) > 0 \
+            while pos < end and value[pos] != '\0' \
                   and value[pos] in string.printable \
                   and value[pos] not in ('\r', '\n'):
                 pos += 1
 
-            if ord(value[pos]) > 0 or pos == posi:
+            if value[pos] != '\0' or pos == posi:
                 return None
             pos += 1
 
@@ -149,7 +159,8 @@ class FdtPropertyStrings(FdtProperty):
     @classmethod
     def __extract_prop_strings(cls, value):
         """Extract strings from raw_value"""
-        return [st for st in value.split('\0') if len(st)]
+        return [st for st in \
+            value.decode(encoding = 'ascii').split('\0') if len(st)]
 
     def __init__(self, name, strings):
         """Init with strings"""
