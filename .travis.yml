@@ -5,5 +5,11 @@ python:
   - "3.2"
   - "3.3"
   - "3.4"
+os:
+ - linux
+ - osx
+matrix:
+  allow_failures:
+    - os: osx
 # run tests
 script: tests/do_tests.bash
