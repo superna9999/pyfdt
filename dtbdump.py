@@ -26,10 +26,10 @@ if __name__ == '__main__':
     
     if args.format == "dts":
         with open(args.out_filename, 'wb') as outfile:
-            outfile.write(fdt.to_dts().encode(encoding = 'ascii'))
+            outfile.write(fdt.to_dts().encode('ascii'))
     elif args.format == "dtb":
         with open(args.out_filename, 'wb') as outfile:
             outfile.write(fdt.to_dtb())
     elif args.format == "json":
         with open(args.out_filename, 'wb') as outfile:
-            outfile.write(fdt.to_json().encode(encoding = 'ascii'))
+            outfile.write(fdt.to_json().encode('ascii'))

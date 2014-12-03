@@ -118,7 +118,7 @@ class FdtProperty(object):
         #decode it with the ascii codec. If the decoding fails, assume
         #it was not a string object.
         try:
-            value = value.decode(encoding = 'ascii')
+            value = value.decode('ascii')
         except ValueError:
             return None
         
@@ -159,7 +159,7 @@ class FdtPropertyStrings(FdtProperty):
     def __extract_prop_strings(cls, value):
         """Extract strings from raw_value"""
         return [st for st in \
-            value.decode(encoding = 'ascii').split('\0') if len(st)]
+            value.decode('ascii').split('\0') if len(st)]
 
     def __init__(self, name, strings):
         """Init with strings"""
@@ -190,7 +190,7 @@ class FdtPropertyStrings(FdtProperty):
         # print "%x:%s" % (pos, self)
         blob = pack('')
         for chars in self.strings:
-            blob += chars.encode(encoding = 'ascii') + pack('b', 0)
+            blob += chars.encode('ascii') + pack('b', 0)
         blob_len = len(blob)
         if version < 16 and (pos+12) % 8 != 0:
             blob = pack('b', 0) * (8-((pos+12) % 8)) + blob
@@ -490,7 +490,7 @@ class FdtNode(object):
             blob = pack('>II', FDT_BEGIN_NODE, 0)
         else:
             blob = pack('>I', FDT_BEGIN_NODE)
-            blob += self.get_name().encode(encoding = 'ascii') + pack('b', 0)
+            blob += self.get_name().encode('ascii') + pack('b', 0)
         if len(blob) % 4:
             blob += pack('b', 0) * (4-(len(blob) % 4))
         pos += len(blob)
@@ -784,7 +784,7 @@ class Fdt(object):
         if self.header['version'] >= 17:
             blob_header += pack('>I', self.header['size_dt_struct'])
         return blob_header + header_adjust + blob_reserve_entries + \
-            blob_dt + blob_strings.encode(encoding = 'ascii')
+            blob_dt + blob_strings.encode('ascii')
 
     def to_json(self):
         """Ouput JSON"""
@@ -947,7 +947,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             byte = self.infile.read(1)
             if ord(byte) == 0:
                 break
-            data += byte.decode(encoding = 'ascii')
+            data += byte.decode('ascii')
         align_pos = pos + len(data) + 1
         align_pos = (((align_pos) + ((4) - 1)) & ~((4) - 1))
         self.infile.seek(align_pos)
@@ -962,7 +962,7 @@ class FdtBlobParse(object):  # pylint: disable-msg=R0903
             byte = self.infile.read(1)
             if ord(byte) == 0:
                 break
-            data += byte.decode(encoding = 'ascii')
+            data += byte.decode('ascii')
         self.infile.seek(pos)
         return data
 

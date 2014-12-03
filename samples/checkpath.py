@@ -10,12 +10,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.filename) as infile:
-        dtb = pyfdt.FdtBlobParse(infile)
+        dtb = FdtBlobParse(infile)
 
     fdt = dtb.to_fdt()
 
     node = fdt.resolve_path(args.path)
-    if isinstance(node, pyfdt.FdtNode):
+    if isinstance(node, FdtNode):
         print node
         for subnode in node:
             print '\t%s' % subnode

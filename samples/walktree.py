@@ -9,7 +9,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.filename) as infile:
-        dtb = pyfdt.FdtBlobParse(infile)
+        dtb = FdtBlobParse(infile)
 
     fdt = dtb.to_fdt()
 

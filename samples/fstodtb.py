@@ -16,5 +16,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.out_filename, "wb") as outfile:
-        fdt = pyfdt.FdtFsParse(args.path)
+        fdt = FdtFsParse(args.path)
         outfile.write(fdt.to_dtb())

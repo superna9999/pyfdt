@@ -3,15 +3,15 @@ from pyfdt.pyfdt import *
 
 phandle = 1
 
-root = pyfdt.FdtNode("/")
-chosen = pyfdt.FdtNode("chosen")
-aliases = pyfdt.FdtNode("aliases")
-memory = pyfdt.FdtNode("memory")
-cpus = pyfdt.FdtNode("cpus")
-clocks = pyfdt.FdtNode("clocks")
-soc = pyfdt.FdtNode("soc")
-soc_intc = pyfdt.FdtNode("interrupt-controller")
-soc_uart = pyfdt.FdtNode("uart@0xF000E000")
+root = FdtNode("/")
+chosen = FdtNode("chosen")
+aliases = FdtNode("aliases")
+memory = FdtNode("memory")
+cpus = FdtNode("cpus")
+clocks = FdtNode("clocks")
+soc = FdtNode("soc")
+soc_intc = FdtNode("interrupt-controller")
+soc_uart = FdtNode("uart@0xF000E000")
 
 root.add_subnode(FdtPropertyWords("#address-cells", [1]))
 root.add_subnode(FdtPropertyWords("#size-cells", [1]))
@@ -53,7 +53,7 @@ for subnode in (soc_intc, soc_uart):
 for subnode in (chosen, aliases, memory, cpus, clocks, soc):
     subnode.set_parent_node(root)
     root.add_subnode(subnode)
-fdt = pyfdt.Fdt()
+fdt = Fdt()
 fdt.add_rootnode(root)
 
 print fdt.to_dts()
