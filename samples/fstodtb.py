@@ -7,7 +7,7 @@ FS to DTB
 """
 
 import argparse
-from pyfdt import *
+from pyfdt.pyfdt import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='FS to Device Tree Blob')

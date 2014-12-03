@@ -7,7 +7,7 @@ import sys
 import errno
 
 from fuse import FUSE, FuseOSError, Operations
-from pyfdt import *
+from pyfdt.pyfdt import *
 from errno import ENOENT
 from stat import S_IFDIR, S_IFLNK, S_IFREG
 from time import time

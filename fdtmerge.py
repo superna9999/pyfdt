@@ -7,7 +7,7 @@ DTB merge : merge dtb2 into db1, replace properties of dtb1 with properties of d
 """
 
 import argparse
-from pyfdt import FdtBlobParse, FdtJsonParse, FdtFsParse
+from pyfdt.pyfdt import FdtBlobParse, FdtJsonParse, FdtFsParse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Blob merge')

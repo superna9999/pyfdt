@@ -8,7 +8,7 @@ DTB compare : compare dtb2 and dtb1
 
 import argparse
 import sys
-from pyfdt import FdtBlobParse, FdtJsonParse, FdtFsParse
+from pyfdt.pyfdt import FdtBlobParse, FdtJsonParse, FdtFsParse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Blob merge')
@@ -24,7 +24,7 @@ if __name__ == '__main__':
         raise Exception('Invalid Format2')
 
     if args.format1 == 'dtb':
-        with open(args.in_dtb1) as infile:
+        with open(args.in_dtb1, 'rb') as infile:
             dtb1 = FdtBlobParse(infile)
         fdt1 = dtb1.to_fdt()
     elif args.format1 == 'json':
@@ -34,11 +34,11 @@ if __name__ == '__main__':
         fdt1 = FdtFsParse(args.in_dtb1)
 
     if args.format2 == 'dtb':
-        with open(args.in_dtb2) as infile:
+        with open(args.in_dtb2, 'rb') as infile:
             dtb2 = FdtBlobParse(infile)
         fdt2 = dtb2.to_fdt()
     elif args.format2 == 'json':
-        with open(args.in_dtb2) as infile:
+        with open(args.in_dtb2, 'r') as infile:
             fdt2 = FdtJsonParse(infile.read())
     else:
         fdt2 = FdtFsParse(args.in_dtb2)
