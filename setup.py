@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='pyfdt',
-      version='0.2',
+      version='0.3',
       description='Python Flattened Device Tree Library',
       author='Neil \'Superna\' Armstrong',
       author_email='superna9999@gmail.com',
