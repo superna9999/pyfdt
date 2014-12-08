@@ -1,0 +1,20 @@
+Source: pyfdt
+Priority: optional
+Maintainer: Neil 'Superna' Armstrong <superna9999@gmail.com>
+Build-Depends: debhelper (>= 9), python-all-dev (>= 2.6.6-3)
+Standards-Version: 3.9.5
+Section: python
+XS-Python-Version: all
+Homepage: https://github.com/superna9999/pyfdt
+
+Package: python-pyfdt
+Architecture: all
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${python:Depends}
+Suggests: device-tree-compiler
+XB-Python-Version: ${python:Versions}
+Description: Python Flattened Device Tree Library
+ The pyfdt library is aimed to facilitate manipulation of the flattened device tree in order to parse it and generate output in various formats.
+ .
+ It is highly based on fdtdump for the dtc compiler package.
+ .
+ Device Tree Blob (.dtb) input is actually the only input format accepted, but either Device Tree Blob (DTB) or Device Tree Structure (text DTS) is available as output format. Device Tree filesystem 'output' is available via the fusemount.py FUSE sample using fusepy library.
