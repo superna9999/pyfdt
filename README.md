@@ -32,11 +32,12 @@ Any API, code, syntax, tests or whatever enhancement is welcomed, but consider t
 No DTS parser/compiler is event considered since "dtc" is the official compiler, but i'm open to any compiler implementation over pyfdt...
 
 Typical usage is :
-
-    from pyfdt import FdtBlobParse
-    with open("myfdt.dtb") as infile:
-	    dtb = FdtBlobParse(infile)
-	print dtb.to_fdt().to_dts()
+```
+from pyfdt import FdtBlobParse
+with open("myfdt.dtb") as infile:
+    dtb = FdtBlobParse(infile)
+    print dtb.to_fdt().to_dts()
+```
 
 Will open a binary DTB and output an human readable DTS structure.
 
