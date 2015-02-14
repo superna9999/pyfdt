@@ -1,3 +1,9 @@
+pyfdt (0.3) unstable; urgency=low
+
+  * New upstream release 
+
+ -- Neil Armstrong <narmstrong@neotion.com>  Mon, 08 Dec 2014 17:11:37 +0100
+
 pyfdt (0.2) unstable; urgency=low
 
   * Initial Release.
