@@ -7,7 +7,7 @@ Python DTB dumper
 """
 
 import argparse
-from pyfdt import FdtBlobParse
+from pyfdt.pyfdt import FdtBlobParse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Device Tree Blob dump')
@@ -19,17 +19,17 @@ if __name__ == '__main__':
     if args.format not in ('dts', 'json', 'dtb'):
         raise Exception('Invalid Output Format')
     
-    with open(args.in_filename) as infile:
+    with open(args.in_filename, 'rb') as infile:
         dtb = FdtBlobParse(infile)
     
     fdt = dtb.to_fdt()
     
     if args.format == "dts":
         with open(args.out_filename, 'wb') as outfile:
-            outfile.write(fdt.to_dts())
+            outfile.write(fdt.to_dts().encode('ascii'))
     elif args.format == "dtb":
         with open(args.out_filename, 'wb') as outfile:
             outfile.write(fdt.to_dtb())
     elif args.format == "json":
         with open(args.out_filename, 'wb') as outfile:
-            outfile.write(fdt.to_json())
+            outfile.write(fdt.to_json().encode('ascii'))
