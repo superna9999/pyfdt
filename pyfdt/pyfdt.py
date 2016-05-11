@@ -439,11 +439,16 @@ class FdtNode(object):
         """Get property name"""
         return self.name
 
-    def __check_name_duplicate(self, name):
-        """Checks if name is not in a subnode"""
+    def __check_name_duplicate(self, subnode):
+        """Checks if name is not in a subnode, only a pair of
+	   Properties and Nodes can have the same name
+	"""
+        is_node = isinstance(subnode, FdtNode)
         for data in self.subdata:
+            data_is_node = isinstance(data, FdtNode)
             if not isinstance(data, FdtNop) \
-               and data.get_name() == name:
+	       and is_node == data_is_node \
+               and data.get_name() == subnode.get_name():
                    return True
         return False
 
@@ -524,7 +529,7 @@ class FdtNode(object):
            must not be a duplicate name
         """
         if self.subdata[index].get_name() != subnode.get_name() and \
-           self.__check_name_duplicate(subnode.get_name()):
+           self.__check_name_duplicate(subnode):
             raise Exception("%s : %s subnode already exists" % \
                                         (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
@@ -568,7 +573,7 @@ class FdtNode(object):
 
     def append(self, subnode):
         """Append subnode, same as add_subnode"""
-        if self.__check_name_duplicate(subnode.get_name()):
+        if self.__check_name_duplicate(subnode):
             raise Exception("%s : %s subnode already exists" % \
                                     (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
@@ -581,7 +586,7 @@ class FdtNode(object):
 
     def insert(self, index, subnode):
         """Insert subnode before index, must not be a duplicate name"""
-        if self.__check_name_duplicate(subnode.get_name()):
+        if self.__check_name_duplicate(subnode):
             raise Exception("%s : %s subnode already exists" % \
                                 (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
