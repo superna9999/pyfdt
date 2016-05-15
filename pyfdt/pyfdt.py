@@ -430,7 +430,8 @@ class FdtNode(object):
     def __init__(self, name):
         """Init node with name"""
         self.name = name
-        self.subdata = []
+        self.subprops = []
+        self.subnodes = []
         self.parent = None
         if not FdtNode.__validate_dt_name(self.name):
             raise Exception("Invalid name '%s'" % self.name)
@@ -443,13 +444,15 @@ class FdtNode(object):
         """Checks if name is not in a subnode, only a pair of
 	   Properties and Nodes can have the same name
 	"""
-        is_node = isinstance(subnode, FdtNode)
-        for data in self.subdata:
-            data_is_node = isinstance(data, FdtNode)
-            if not isinstance(data, FdtNop) \
-	       and is_node == data_is_node \
-               and data.get_name() == subnode.get_name():
-                   return True
+        if isinstance(subnode, FdtNode):
+            for data in self.subnodes:
+                if data.get_name() == subnode.get_name():
+                       return True
+        else:
+            for data in self.subprops:
+                if not isinstance(data, FdtNop) \
+                   and data.get_name() == subnode.get_name():
+                       return True
         return False
 
     def add_subnode(self, node):
@@ -478,7 +481,7 @@ class FdtNode(object):
     def dts_represent(self, depth=0):
         """Get dts string representation"""
         result = ('\n').join([sub.dts_represent(depth+1)
-                                         for sub in self.subdata])
+                                         for sub in (self.subprops+self.subnodes)])
         if len(result) > 0:
             result += '\n'
         return INDENT*depth + self.name + ' {\n' + \
@@ -499,7 +502,7 @@ class FdtNode(object):
         if len(blob) % 4:
             blob += pack('b', 0) * (4-(len(blob) % 4))
         pos += len(blob)
-        for sub in self.subdata:
+        for sub in (self.subprops+self.subnodes):
             (data, strings, pos) = sub.dtb_represent(strings, pos, version)
             blob += data
         pos += 4
@@ -510,8 +513,8 @@ class FdtNode(object):
         """Get dts string representation"""
         result = (',\n'+ \
                   INDENT*(depth+1)).join([sub.json_represent(depth+1)
-                                          for sub in self.subdata
-                                          if not isinstance(sub, FdtNop)])
+                                    for sub in (self.subprops + self.subnodes)
+                                        if not isinstance(sub, FdtNop)])
         if len(result) > 0:
             result = INDENT + result + '\n'+INDENT*depth
         if self.get_name() == '/':
@@ -522,23 +525,28 @@ class FdtNode(object):
 
     def __getitem__(self, index):
         """Get subnodes, returns either a Node, a Property or a Nop"""
-        return self.subdata[index]
+        items = (self.subprops + self.subnodes)
+        return items[index]
 
     def __setitem__(self, index, subnode):
         """Set node at index, replacing previous subnode, 
            must not be a duplicate name
         """
-        if self.subdata[index].get_name() != subnode.get_name() and \
+        items = (self.subprops + self.subnodes)
+        if items[index].get_name() != subnode.get_name() and \
            self.__check_name_duplicate(subnode):
             raise Exception("%s : %s subnode already exists" % \
                                         (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
             raise Exception("Invalid object type")
-        self.subdata[index] = subnode
+        if index > len(self.subprops):
+            self.subnodes[index-len(self.subprops)] = subnode
+        else:
+            self.subprops[index] = subnode
 
     def __len__(self):
         """Get strings count"""
-        return len(self.subdata)
+        return len(self.subprops+self.subnodes)
 
     def __ne__(self, node):
         """Check node inequality
@@ -558,13 +566,18 @@ class FdtNode(object):
             raise Exception("Invalid object type")
         if self.name != node.get_name():
             return False
-        curnames = set([subnode.get_name() for subnode in self.subdata
+        curpnames = set([subnode.get_name() for subnode in self.subprops
                                     if not isinstance(subnode, FdtNop)])
-        cmpnames = set([subnode.get_name() for subnode in node
-                                    if not isinstance(subnode, FdtNop)])
-        if curnames != cmpnames:
+        curnnames = set([subnode.get_name() for subnode in self.subnodes])
+        cmppnames = set([subnode.get_name() for subnode in node
+                                    if not isinstance(subnode, FdtNop) \
+                                    and isinstance(subnode, FdtProperty)])
+        cmpnnames = set([subnode.get_name() for subnode in node
+                                    if isinstance(subnode, FdtNode)])
+        if curpnames != cmppnames or curnnames != cmpnnames:
             return False
-        for subnode in [subnode for subnode in self.subdata
+        # TOFIX: wont work since index fetches props and nodes
+        for subnode in [subnode for subnode in (self.subprops+self.subnodes)
                                     if not isinstance(subnode, FdtNop)]:
             index = node.index(subnode.get_name())
             if subnode != node[index]:
@@ -578,26 +591,42 @@ class FdtNode(object):
                                     (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
             raise Exception("Invalid object type")
-        self.subdata.append(subnode)
+        if isinstance(subnode, (FdtProperty, FdtNop)):
+            self.subprops.append(subnode)
+        else:
+            self.subnodes.append(subnode)
 
     def pop(self, index=-1):
         """Remove and returns subnode at index, default the last"""
-        return self.subdata.pop(index)
+        items = (self.subprops+self.subnodes)
+        if index > len(self.subprops):
+            return self.subnodes.pop(index-len(self.subprops))
+        else:
+            return self.subprops.pop(index)
 
     def insert(self, index, subnode):
         """Insert subnode before index, must not be a duplicate name"""
+        items = (self.subprops+self.subnodes)
         if self.__check_name_duplicate(subnode):
             raise Exception("%s : %s subnode already exists" % \
                                 (self, subnode))
         if not isinstance(subnode, (FdtNode, FdtProperty, FdtNop)):
             raise Exception("Invalid object type")
-        self.subdata.insert(index, subnode)
+        if index > len(self.subprops):
+            if isinstance(subnode, FdtProperty):
+                self.subprops.append(subnode)
+            else:
+                self.subnodes.insert(index-len(self.subprops), subnode)
+        else:
+            self.subprops.insert(index, subnode)
 
     def _find(self, name):
         """Find name in subnodes"""
-        for i in range(0, len(self.subdata)):
-            if not isinstance(self.subdata[i], FdtNop) and \
-               name == self.subdata[i].get_name():
+        items = (self.subprops+self.subnodes)
+        # TOFIX: won't work if prop + node has the same name
+        for i in range(0, len(items)):
+            if not isinstance(items[i], FdtNop) and \
+               name == items[i].get_name():
                 return i
         return None
 
@@ -605,15 +634,21 @@ class FdtNode(object):
         """Remove subnode with the name
            Raises ValueError is not present
         """
+        items = (self.subprops+self.subnodes)
+        # TOFIX: won't work if prop + node has the same name
         index = self._find(name)
         if index is None:
             raise ValueError("Not present")
-        return self.subdata.pop(index)
+        if index > len(self.subprops):
+            self.subnodes.pop(index-len(self.subprops))
+        else:
+            self.subprops.pop(index)
 
     def index(self, name):
         """Returns position of subnode with the name
            Raises ValueError is not present
         """
+        # TOFIX: won't work if prop + node has the same name
         index = self._find(name)
         if index is None:
             raise ValueError("Not present")
@@ -623,6 +658,7 @@ class FdtNode(object):
         """Merge two nodes and subnodes
            Replace current properties with the given properties
         """
+        # TOFIX: won't work if prop + node has the same name
         if not isinstance(node, FdtNode):
             raise Exception("Can only merge with a FdtNode")
         for subnode in [obj for obj in node 
@@ -634,9 +670,9 @@ class FdtNode(object):
                     dup.set_parent_node(self)
                 self.append(dup)
             elif isinstance(subnode, FdtNode):
-                self.subdata[index].merge(subnode)
+                self.subnodes[index-len(self.subprops)].merge(subnode)
             else:
-                self.subdata[index] = copy(subnode)
+                self.subprops[index] = copy(subnode)
 
     def walk(self):
         """Walk into subnodes and yield paths and objects
