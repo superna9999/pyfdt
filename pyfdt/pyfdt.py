@@ -167,8 +167,6 @@ class FdtPropertyStrings(FdtProperty):
         if not strings:
             raise Exception("Invalid strings")
         for stri in strings:
-            if len(stri) == 0:
-                raise Exception("Invalid strings")
             if any([True for char in stri
                         if char not in string.printable 
                            or char in ('\r', '\n')]):
