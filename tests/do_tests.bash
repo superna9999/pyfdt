@@ -253,7 +253,6 @@ gen_nobyte
 gen_badbyte
 gen_noword
 gen_badword
-gen_emptystr
 gen_badstr
 gen_norootnode
 manip_bad_setitem
