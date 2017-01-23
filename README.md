@@ -52,4 +52,4 @@ The samples directory shows how to :
 [Device Tree Wiki](http://www.devicetree.org)
 [Device Tree Compiler](http://www.devicetree.org/Device_Tree_Compiler)
 
-[![Build Status](https://travis-ci.org/superna9999/pyfdt.svg?branch=master)](https://travis-ci.org/superna9999/pyfdt)
+[![Build Status](https://travis-ci.org/superna9999/pyfdt.svg?branch=master)](https://travis-ci.org/superna9999/pyfdt) [![Coverity Scan Build Status](https://scan.coverity.com/projects/11526/badge.svg)](https://scan.coverity.com/projects/superna9999-pyfdt)
