@@ -33,7 +33,7 @@ No DTS parser/compiler is event considered since "dtc" is the official compiler,
 
 Typical usage is :
 ```
-from pyfdt import FdtBlobParse
+from pyfdt.pyfdt import FdtBlobParse
 with open("myfdt.dtb") as infile:
     dtb = FdtBlobParse(infile)
     print dtb.to_fdt().to_dts()
