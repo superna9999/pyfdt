@@ -146,7 +146,7 @@ class FdtProperty(object):
             return FdtPropertyStrings.init_raw(name, raw_value)
         elif len(raw_value) and len(raw_value) % 4 == 0:
             return FdtPropertyWords.init_raw(name, raw_value)
-        elif len(raw_value) and len(raw_value):
+        elif len(raw_value):
             return FdtPropertyBytes.init_raw(name, raw_value)
         else:
             return FdtProperty(name)
