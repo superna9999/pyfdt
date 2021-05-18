@@ -338,7 +338,7 @@ class FdtPropertyBytes(FdtProperty):
     def dts_represent(self, depth=0):
         """Get dts string representation"""
         return INDENT*depth + self.name + ' = [' + \
-            ' '.join(["%02x" % (byte & int('ffffffff',16)) 
+            ' '.join(["%02x" % (byte & int('ff',16)) 
                       for byte in self.bytes]) + "];"
 
     def dtb_represent(self, string_store, pos=0, version=17):
