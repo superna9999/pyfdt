@@ -118,6 +118,7 @@ v17.stm.test_tree1.dtb
 v17.tms.test_tree1.dtb
 v17.tsm.test_tree1.dtb
 moved.sw_tree1.test.dtb
+label01.dts.fdtput.test.dtb
 "
 
 echo "Building DTC..."
