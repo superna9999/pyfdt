@@ -34,9 +34,9 @@ No DTS parser/compiler is event considered since "dtc" is the official compiler,
 Typical usage is :
 ```
 from pyfdt.pyfdt import FdtBlobParse
-with open("myfdt.dtb") as infile:
+with open("myfdt.dtb",'rb') as infile:
     dtb = FdtBlobParse(infile)
-    print dtb.to_fdt().to_dts()
+    print(dtb.to_fdt().to_dts())
 ```
 
 Will open a binary DTB and output an human readable DTS structure.
